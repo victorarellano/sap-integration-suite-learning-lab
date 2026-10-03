@@ -1,0 +1,44 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "window.title": "🔗 SAP Integration Suite Learning Lab",
+        "workbench.colorCustomizations": {
+            "titleBar.activeBackground": "#0A6ED1",
+            "titleBar.activeForeground": "#FFFFFF",
+            "titleBar.inactiveBackground": "#0854A0",
+            "titleBar.inactiveForeground": "#FFFFFF"
+        },
+        "files.encoding": "utf8",
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "editor.wordWrap": "on",
+        "editor.rulers": [
+            100
+        ],
+        "editor.renderWhitespace": "boundary",
+        "markdown.preview.breaks": true,
+        "markdown.validate.enabled": true,
+        "markdown.validate.fileLinks.enabled": "warning",
+        "markdown.validate.fragmentLinks.enabled": "warning",
+        "files.exclude": {
+            "**/.DS_Store": true,
+            "**/Thumbs.db": true
+        },
+        "search.exclude": {
+            "**/.git": true
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "yzhang.markdown-all-in-one",
+            "DavidAnson.vscode-markdownlint",
+            "bierner.markdown-preview-github-styles",
+            "eamodio.gitlens",
+            "humao.rest-client"
+        ]
+    }
+}
