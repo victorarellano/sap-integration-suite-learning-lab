@@ -1,18 +1,12 @@
 # SAP Integration Suite Learning Lab
 
-Curso práctico y progresivo para aprender **SAP Integration Suite**, con
-foco inicial en **Cloud Integration (CPI)**. La documentación está en
-español y cada tema mantiene un estado explícito para saber qué fue
-realmente estudiado, practicado y validado.
+Curso práctico y progresivo para aprender **SAP Integration Suite**, con foco inicial en **Cloud Integration (CPI)**.  Cada tema mantiene un estado explícito para saber qué fue realmente estudiado, practicado y validado.
 
 ## Objetivo
 
-Partir desde una cuenta SAP BTP Trial sin configurar y avanzar, mediante
-microaprendizajes y laboratorios, hasta construir integraciones con
-patrones y funcionalidades habituales de SAP Cloud Integration.
+Partir desde una cuenta SAP BTP Trial sin configurar y avanzar, mediante microaprendizajes y laboratorios, hasta construir integraciones con patrones y funcionalidades habituales de SAP Cloud Integration.
 
-El criterio de avance no es solamente leer un tema: un tema se considera
-completado cuando su ejercicio fue ejecutado y validado.
+El criterio de avance no es solamente leer un tema: un tema se considera completado cuando su ejercicio fue ejecutado y validado.
 
 ## Estados
 
@@ -57,26 +51,17 @@ completado cuando su ejercicio fue ejecutado y validado.
 
 ## Registro de conocimiento y problemas
 
-Los comportamientos inesperados, incidentes de Trial, errores
-reproducibles y referencias SAP se consolidan en [KBA y
-hallazgos](docs/kba-y-hallazgos.md).
+Los comportamientos inesperados, incidentes de Trial, errores reproducibles y referencias SAP se consolidan en [KBA y hallazgos](docs/kba-y-hallazgos.md).
 
 ## Metodología
 
-Cada tema se desarrolla como un microaprendizaje: objetivo breve,
-conceptos mínimos, laboratorio guiado, validación observable y registro
-del estado. Cuando corresponda, se documentan capturas reales del
-laboratorio.
+Cada tema se desarrolla como un microaprendizaje: objetivo breve, conceptos mínimos, laboratorio guiado, validación observable y registro del estado. Cuando corresponda, se documentan capturas reales del laboratorio.
 
-La guía que define cómo debe desarrollarse el curso está en
-[INSTRUCCIONES.md](INSTRUCCIONES.md).
+La guía que define cómo debe desarrollarse el curso está en [INSTRUCCIONES.md](INSTRUCCIONES.md).
 
 ## Entorno inicial del laboratorio
 
-El laboratorio se inició sobre SAP BTP Trial en AWS, región US East
-(VA), con Cloud Foundry y un space `dev`. Se habilitó SAP Integration
-Suite, Cloud Integration y Process Integration Runtime. El primer iFlow
-se probó desde Postman mediante OAuth 2.0 Client Credentials.
+El laboratorio se inició sobre SAP BTP Trial en AWS, región US East (VA), con Cloud Foundry y un space `dev`. Se habilitó SAP Integration Suite, Cloud Integration y Process Integration Runtime. El primer iFlow se probó desde Postman mediante OAuth 2.0 Client Credentials.
 
 > **Seguridad:** nunca almacenar `client_secret`, access tokens,
 > contraseñas o material criptográfico real en Git. Las capturas
