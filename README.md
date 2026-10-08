@@ -23,10 +23,11 @@ El criterio de avance no es solamente leer un tema: un tema se considera complet
 
 | ID | Tema | Estado | Evidencia |
 |---|---|---|---|
+| 00 | [Arquitectura de SAP BTP y entorno Cloud Foundry](docs/00-arquitectura-sap-btp-cloud-foundry.md) | ✅ `Completado` | — |
 | 01 | [Habilitación de SAP BTP Trial](docs/01-habilitacion-sap-btp-trial.md) | ✅ `Completado` | Cuenta, subaccount, Cloud Foundry y space `dev` |
 | 02 | [Habilitación de SAP Integration Suite y Cloud Integration](docs/02-habilitacion-integration-suite.md) | ✅ `Completado` | Suscripción, roles, capability y runtime |
 | 03 | [Primer iFlow HTTP + OAuth Client Credentials](docs/03-primer-iflow-http-oauth.md) | ✅ `Completado` | Endpoint protegido probado desde Postman |
-| 04 | Packages, artefactos y ciclo de vida de un iFlow | ⬜ `Pendiente` | — |
+| 04 | Packages, artefactos y ciclo de vida de un iFlow | ⬜ `En curso` | — |
 | 05 | Message, headers, properties y Content Modifier | ⬜ `Pendiente` | — |
 | 06 | Sender y Receiver Adapters | ⬜ `Pendiente` | — |
 | 07 | Transformaciones: Message Mapping | ⬜ `Pendiente` | — |
