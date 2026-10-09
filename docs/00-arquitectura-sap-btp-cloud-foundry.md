@@ -221,6 +221,4 @@ Estos hallazgos pueden incorporarse a `docs/kba-y-hallazgos.md` como aclaracione
 
 Consultar las guías vigentes de SAP para detalles específicos de servicios, planes y autenticación.
 
-## Uso de las imágenes en GitHub
 
-Las imágenes se almacenan en `images/tema-00/` y el documento en `docs/`. Mantener la estructura al subir al repositorio; las rutas relativas permiten ver las capturas en GitHub. Antes de publicar, revisar cualquier dato personal o identificador que aparezca en capturas. No se incluyen service keys ni secretos.
