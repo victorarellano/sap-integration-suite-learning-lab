@@ -38,7 +38,7 @@ Distinguir Body, Message Headers y Exchange Properties; configurarlos mediante C
 
 **Evidencia — iFlow creado**
 
-![Figura 05-01. iFlow Message Headers Properties Lab creado en el package CPI Learning Lab, antes de completar su diseño.](./images/tema-05/05-01-iflow-diseno.png)
+![Figura 05-01. iFlow Message Headers Properties Lab creado en el package CPI Learning Lab, antes de completar su diseño.](./images/tema-05/05-01-iflow-creado.png)
 
 ### Paso 2 — Configurar HTTPS Sender
 
