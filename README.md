@@ -29,7 +29,7 @@ El criterio de avance no es solamente leer un tema: un tema se considera complet
 | 03 | [Primer iFlow HTTP + OAuth Client Credentials](docs/03-primer-iflow-http-oauth.md) | ✅ `Completado` | Endpoint protegido probado desde Postman |
 | 04 | [Packages, artefactos y ciclo de vida de un iFlow](docs/04-packages-artefactos-ciclo-vida-iflow.md) | ✅ `Completado` | Package e iFlow identificados; Save vs Deploy validado con Postman; versiones Design 1.0.1 y Runtime 1.0.0 verificadas |
 | 05 | [Message, headers, properties y Content Modifier](docs/05-message-headers-properties-content-modifier.md) | ✅ `Completado` | Validados tres laboratorios: creación y recuperación de headers y exchange properties, reemplazo del Body y protección CSRF en HTTPS Sender. Despliegues Started, respuestas HTTP 200, rechazo 403 sin token y ejecución automatizada OAuth → CSRF → POST mediante Postman Collection Runner.|
-| 06 | Sender y Receiver Adapters | ⬜ `Pendiente` | — |
+| 06 | [Sender y Receiver Adapters](docs/06-sender-receiver-adapters.md) | ✅ `Completado` | Validados HTTPS Sender, Request Reply y HTTP Receiver hacia HTTPBin: GET con 3/3 aserciones; POST protegido con CSRF, rechazo 403 sin token y Collection Runner OAuth → CSRF → POST con 6/6 aserciones, sin errores. |
 | 07 | Transformaciones: Message Mapping | ⬜ `Pendiente` | — |
 | 08 | Content Enricher y Request-Reply | ⬜ `Pendiente` | — |
 | 09 | Routing: Router y condiciones | ⬜ `Pendiente` | — |
