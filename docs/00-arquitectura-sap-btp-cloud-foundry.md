@@ -1,4 +1,4 @@
-# 00 — Arquitectura de SAP BTP y entorno Cloud Foundry
+# 00 - Arquitectura de SAP BTP y entorno Cloud Foundry
 
 **Estado:** 🟨 En curso
 **Duración estimada:** 45–60 minutos

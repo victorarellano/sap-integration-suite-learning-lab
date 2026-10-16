@@ -1,4 +1,4 @@
-# 02 --- Habilitación de SAP Integration Suite y Cloud Integration
+# 02 - Habilitación de SAP Integration Suite y Cloud Integration
 
 **Estado:** ✅ Completado
 

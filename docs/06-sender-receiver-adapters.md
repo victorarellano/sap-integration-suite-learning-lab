@@ -1,4 +1,4 @@
-# 06 — Sender y Receiver Adapters
+# 06 - Sender y Receiver Adapters
 
 **Estado:** ✅ Completado
 **Área:** SAP Integration Suite — Cloud Integration

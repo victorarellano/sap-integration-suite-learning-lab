@@ -1,4 +1,4 @@
-# 01 --- Habilitación de SAP BTP Trial
+# 01 - Habilitación de SAP BTP Trial
 
 **Estado:** ✅ Completado
 

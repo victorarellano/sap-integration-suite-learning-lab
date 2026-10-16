@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Empleado>
+    <Id>1001</Id>
+    <Nombre>Victor</Nombre>
+    <Apellido>Arellano</Apellido>
+</Empleado>

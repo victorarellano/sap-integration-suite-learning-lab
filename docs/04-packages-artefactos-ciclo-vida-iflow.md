@@ -1,4 +1,4 @@
-# 04 — Packages, artefactos y ciclo de vida de un iFlow
+# 04 - Packages, artefactos y ciclo de vida de un iFlow
 
 **Estado:** ✅ Completado
 **Fecha de validación:** 2026-10-09

@@ -1,4 +1,4 @@
-# 05 — Message, Headers, Properties y Content Modifier
+# 05 - Message, Headers, Properties y Content Modifier
 
 **Estado:** ✅ Completado
 **Área:** SAP Integration Suite — Cloud Integration
