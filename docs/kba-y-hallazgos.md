@@ -219,3 +219,146 @@ La instancia representa un recurso del servicio, mientras que Cloud Integration 
 **Alcance:** confirmado para esta ejecución del laboratorio. No generalizar como causa única de cualquier error `Premature end of file`.
 
 **Evidencias:** `docs/images/tema-07/07-2-postman-error-http-500.png` y `docs/images/tema-07/07-2-postman-transformacion-correcta.png`.
+
+
+## KBA-LAB-007 — `java.lang.String.call()` en Groovy MarkupBuilder
+
+**Origen:** Laboratorio 08.2 — Content Enricher y Request-Reply.
+**Estado:** Resuelto y validado con Postman.
+
+**Síntoma:** el iFlow `Request Reply` se encontraba desplegado, pero el procesamiento del mensaje falló. En Monitor Message Processing se observó:
+
+```text
+No signature of method: java.lang.String.call() is applicable for argument types: (java.lang.String) values: [SOL-1001]
+```
+
+**Diagnóstico:** en `GRV_Enriquecer_Solicitud.groovy`, las variables locales `solicitudId`, `clienteId` y `origen` compartían nombres con los nodos que se pretendía crear mediante `MarkupBuilder`, por ejemplo `solicitudId(solicitudId)`. La coincidencia producía la invocación errónea de un `String` como función.
+
+**Solución:** renombrar las variables a `vSolicitudId`, `vClienteId`, `vOrigen` y actualizar todas las referencias, conservando los nombres XML de salida.
+
+**Validación:** nueva ejecución POST con JSON `Solicitud`, HTTP `200 OK` y respuesta `SolicitudEnriquecida` que contiene `SOL-1001`, `1001`, `POSTMAN`, `Ana`, `PREMIUM`.
+
+**Alcance:** confirmado para el script y mensaje de este laboratorio; otros errores `String.call()` pueden tener causas diferentes.
+
+**Evidencia:** `docs/images/tema-08/08-2-postman-enriquecimiento-200.png`.
+
+
+---
+
+## KBA-LAB-008 — Errores de compatibilidad de Groovy Script v2 y procesamiento XML
+
+**Origen:** Laboratorio 08.2 — Content Enricher y Request-Reply.
+**Artefacto:** `Request Reply`.
+**Recurso:** `GRV_Enriquecer_Solicitud.groovy`.
+**Estado:** Resuelto y validado con Postman (21-10-2026).
+
+### Contexto
+
+El iFlow recibe un JSON de solicitud por HTTPS, lo convierte a XML, conserva la solicitud original en la Exchange Property `SolicitudOriginal`, consulta los datos del cliente mediante Request Reply y construye una respuesta XML enriquecida con Groovy.
+
+### Síntomas
+
+1. El editor mostró una advertencia de procesamiento XML sin streaming al usar `message.getBody(String)` y `XmlSlurper.parseText(...)` para el body de la respuesta.
+2. Tras modificar el código y utilizar el recurso Groovy Script v2, el monitor registró un error de compilación: `unable to resolve class groovy.util.XmlSlurper`.
+3. En ejecuciones posteriores, el monitor registró otro error de compilación: `unable to resolve class com.sap.gateway.ip.core.customdev.util.Message`.
+4. Las ejecuciones fallidas se reflejaron en *Monitor Message Processing*, aunque el artefacto había sido desplegado. En una captura posterior, la versión 1.0.2 figuraba temporalmente como `Starting`; ese estado por sí solo no confirma el resultado de ejecución.
+
+### Diagnóstico
+
+Las comprobaciones de compatibilidad del editor identificaron imports no compatibles con el recurso Groovy Script v2, asociado al runtime Groovy 4. En las versiones fallidas del código se utilizaron imports de la API anterior:
+
+```groovy
+import com.sap.gateway.ip.core.customdev.util.Message
+import groovy.util.XmlSlurper
+```
+
+La advertencia de streaming era un problema diferente de los errores de import: recomendaba evitar la conversión previa del body completo a `String` para analizarlo con `XmlSlurper`.
+
+**Límite del diagnóstico:** las capturas no permiten determinar por qué una ejecución seguía mostrando un import anterior mientras se estaban realizando correcciones. No se atribuye esa discrepancia a una causa específica del runtime o del despliegue.
+
+### Solución aplicada
+
+Se utilizaron los imports compatibles con el recurso Groovy Script v2 del laboratorio:
+
+```groovy
+import com.sap.it.script.v2.api.Message
+import groovy.xml.MarkupBuilder
+import groovy.xml.XmlSlurper
+```
+
+Se mantuvo el método de entrada:
+
+```groovy
+def Message processData(Message message) {
+    // Procesamiento de la solicitud y de la respuesta del servicio
+    return message
+}
+```
+
+Para analizar el body XML recibido desde Request Reply se utilizó un `Reader`:
+
+```groovy
+def clientes = new XmlSlurper().parse(
+    message.getBody(java.io.Reader)
+)
+```
+
+La solicitud original, guardada previamente como propiedad, se recuperó y analizó por separado:
+
+```groovy
+String originalXml = message.getProperty("SolicitudOriginal") as String
+
+def solicitud = new XmlSlurper().parseText(originalXml)
+```
+
+**Por qué:** el `Reader` permite entregar el body al parser sin convertirlo previamente en una cadena. La propiedad `SolicitudOriginal` conserva el contenido anterior a la llamada Request Reply, cuyo resultado pasa a ocupar el body del mensaje.
+
+Después de las correcciones se volvió a cargar el recurso Groovy y se desplegó la versión 1.0.2 del iFlow.
+
+### Validación práctica
+
+- El editor mostró `No data` en *Upgrade Readiness Checks* después de actualizar los imports.
+- Se observó el despliegue de la versión `1.0.2` del artefacto `Request Reply`.
+- Una nueva solicitud POST desde Postman devolvió **HTTP 200 OK** y un XML enriquecido.
+
+**Solicitud de validación:**
+
+```json
+{
+  "Solicitud": {
+    "solicitudId": "SOL-1002",
+    "clienteId": "1001",
+    "origen": "POSTMAN"
+  }
+}
+```
+
+**Respuesta observada:**
+
+```xml
+<SolicitudEnriquecida>
+    <solicitudId>SOL-1002</solicitudId>
+    <clienteId>1001</clienteId>
+    <origen>POSTMAN</origen>
+    <Cliente>
+        <nombre>Ana</nombre>
+        <segmento>PREMIUM</segmento>
+    </Cliente>
+</SolicitudEnriquecida>
+```
+
+La respuesta valida el recorrido funcional de la solicitud y la construcción del XML enriquecido. No se afirma que la captura de estado `Starting` demuestre por sí misma un estado final `Started`.
+
+### Aprendizajes reutilizables
+
+- La versión del paso Groovy Script condiciona las APIs e imports disponibles; no deben mezclarse imports de versiones distintas sin comprobar su compatibilidad.
+- En este recurso Groovy Script v2 se utilizó `com.sap.it.script.v2.api.Message` y `groovy.xml.XmlSlurper`.
+- La lectura del body con `java.io.Reader` evita una conversión previa innecesaria a `String`.
+- `Started` o un despliegue iniciado no sustituyen una prueba de procesamiento real; la evidencia funcional fue el HTTP 200 y el XML esperado.
+- Los errores del monitor deben conservarse como evidencia diagnóstica, sin atribuir causas que no estén demostradas.
+
+**Alcance:** confirmado para el artefacto `Request Reply` y el recurso Groovy Script v2 utilizados en el laboratorio 08.2. No implica que los imports anteriores sean inválidos en todos los entornos o versiones.
+
+**Evidencia:** capturas del editor Groovy, *Upgrade Readiness Checks*, *Monitor Message Processing*, despliegue de la versión 1.0.2 y respuesta HTTP 200 en Postman del laboratorio 08.2. Las rutas de estas capturas no se especifican porque no se ha confirmado su nombre definitivo en el repositorio.
+
+**Relacionado con:** KBA-LAB-007 — `java.lang.String.call()` en Groovy MarkupBuilder; Laboratorio 08.2 — Content Enricher y Request-Reply.
