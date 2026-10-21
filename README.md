@@ -31,7 +31,7 @@ El criterio de avance no es solamente leer un tema: un tema se considera complet
 | 05 | [Message, headers, properties y Content Modifier](docs/05-message-headers-properties-content-modifier.md) | ✅ `Completado` | Validados tres laboratorios: creación y recuperación de headers y exchange properties, reemplazo del Body y protección CSRF en HTTPS Sender. Despliegues Started, respuestas HTTP 200, rechazo 403 sin token y ejecución automatizada OAuth → CSRF → POST mediante Postman Collection Runner.|
 | 06 | [Sender y Receiver Adapters](docs/06-sender-receiver-adapters.md) | ✅ `Completado` | Validados HTTPS Sender, Request Reply y HTTP Receiver hacia HTTPBin: GET con 3/3 aserciones; POST protegido con CSRF, rechazo 403 sin token y Collection Runner OAuth → CSRF → POST con 6/6 aserciones, sin errores. |
 | 07 | [07 — Transformaciones: Message Mapping](docs/07-transformaciones-message-mapping.md) | ✅ `Completado` | Laboratorios 07.1 (simulación) y 07.2 (iFlow HTTPS + Postman) completados. |
-| 08 | Content Enricher y Request-Reply | ✅ `Completado` | 08.1 Request-Reply GET validado; 08.2 enriquecimiento POST JSON → XML validado (HTTP 200). 08.3 y 08.4 pendientes. |
+| 08 | Content Enricher y Request-Reply | ✅ `Completado` | 08.1 Request-Reply GET validado; 08.2 enriquecimiento POST JSON → XML validado (HTTP 200). 08.3 Headers y Exchange Properties y 08.4 Manejo de errores con Exception Subprocess. |
 | 09 | Routing: Router y condiciones | ⬜ `Pendiente` | — |
 | 10 | Splitter, Gather y procesamiento de colecciones | ⬜ `Pendiente` | — |
 | 11 | Formatos JSON, XML y conversores | ⬜ `Pendiente` | — |
