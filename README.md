@@ -32,7 +32,7 @@ El criterio de avance no es solamente leer un tema: un tema se considera complet
 | 06 | [Sender y Receiver Adapters](docs/06-sender-receiver-adapters.md) | ✅ `Completado` | Validados HTTPS Sender, Request Reply y HTTP Receiver hacia HTTPBin: GET con 3/3 aserciones; POST protegido con CSRF, rechazo 403 sin token y Collection Runner OAuth → CSRF → POST con 6/6 aserciones, sin errores. |
 | 07 | [07 — Transformaciones: Message Mapping](docs/07-transformaciones-message-mapping.md) | ✅ `Completado` | Laboratorios 07.1 (simulación) y 07.2 (iFlow HTTPS + Postman) completados. |
 | 08 | Content Enricher y Request-Reply | ✅ `Completado` | 08.1 Request-Reply GET validado; 08.2 enriquecimiento POST JSON → XML validado (HTTP 200). 08.3 Headers y Exchange Properties y 08.4 Manejo de errores con Exception Subprocess. |
-| 09 | Routing: Router y condiciones | ⬜ `Pendiente` | — |
+| 09 | Routing: Router y condiciones | ✅ `Completado` | 09.1 Router con headers; 09.2 Exchange Properties; 09.3 ruta DEFAULT; 09.4 XPath sobre XML; 09.5 routing combinado. Cinco laboratorios validados mediante despliegue y pruebas en Postman. Evidencias documentadas en el archivo del tema. |
 | 10 | Splitter, Gather y procesamiento de colecciones | ⬜ `Pendiente` | — |
 | 11 | Formatos JSON, XML y conversores | ⬜ `Pendiente` | — |
 | 12 | Groovy Script: cuándo usarlo y cuándo evitarlo | ⬜ `Pendiente` | — |
