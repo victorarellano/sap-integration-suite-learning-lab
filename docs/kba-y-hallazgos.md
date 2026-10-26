@@ -363,28 +363,29 @@ La respuesta valida el recorrido funcional de la solicitud y la construcción de
 
 **Relacionado con:** KBA-LAB-007 — `java.lang.String.call()` en Groovy MarkupBuilder; Laboratorio 08.2 — Content Enricher y Request-Reply.
 
+## KBA-LAB-009 — 502 Bad Gateway por header Content/Type mal formado
 
-# Hallazgo — Router no compatible con Gather en el diseño probado
+### Hallazgo — Router no compatible con Gather en el diseño probado
 
 **Fecha:** 2026-10-23
 **Módulo:** 10.3 — Gather
 **Estado:** Solución validada en laboratorio
 
-## Síntoma
+### Síntoma
 
 El validador del iFlow `CPI_LAB_10_Splitter_Gather` mostró:
 
 `You cannot use Router with gather; use gather after splitter or join`
 
-## Contexto
+### Contexto
 
 Se intentó conectar las salidas de un Router, tras sendos Content Modifiers, a un Gather común para agregar los mensajes generados por un General Splitter.
 
-## Diagnóstico
+### Diagnóstico
 
 El validador rechazó la topología Router → Gather utilizada en este laboratorio. El mensaje no demuestra que todas las combinaciones posibles de Router y Gather sean incompatibles.
 
-## Solución validada
+### Solución validada
 
 Se conservó la versión anterior del trabajo con Router y se sustituyó el diseño activo por:
 
@@ -392,10 +393,28 @@ Se conservó la versión anterior del trabajo con Router y se sustituyó el dise
 
 Gather se configuró con `XML (Same Format)` y `Combine`. Tras desplegar, Postman devolvió `200 OK` y un XML `multimap:Messages` con los tres pedidos; Trace confirmó el payload consolidado.
 
-## Alcance
+### Alcance
 
 Hallazgo observado en el editor y runtime del tenant utilizado para el laboratorio 10.3. No se ha evaluado la alternativa con Join ni otras topologías.
 
-## Evidencias
+### Evidencias
 
 Consultar `10-16-gather-router-incompatible.png`, `10-17-gather-arquitectura-corregida.png`, `10-18-gather-postman-resultado.png` y `10-19-gather-trace-consolidacion.png` en el documento del módulo 10.
+
+
+## KBA-LAB-010 — 502 Bad Gateway por header Content/Type mal formado
+
+**Origen:** Tema 11.4 — `LAB11_04_JSON_XML_Roundtrip`
+**Estado:** Resuelto y validado (26-10-2026).
+
+**Síntoma:** Postman devolvía `502 Bad Gateway`, mientras Monitor Message Processing registraba el mensaje como `Completed`.
+
+**Diagnóstico:** el header de respuesta `X-Cf-Routererror` contenía `malformed MIME header line: "Content/Type: application/json; charset=UTF-8"`. La configuración del Content Modifier usaba `Content/Type` en lugar de `Content-Type`.
+
+**Solución:** corregir el nombre del Message Header a `Content-Type`, conservando el valor `application/json; charset=UTF-8`, y volver a probar el endpoint.
+
+**Validación:** Postman devolvió `200 OK` y `4/4` pruebas aprobadas. El JSON resultante conservó la estructura, aunque algunos valores numéricos pasaron a cadenas.
+
+**Aprendizaje:** el procesamiento interno `Completed` no garantiza la entrega correcta de la respuesta HTTP. Revisar los headers y los mensajes del router ante errores 502.
+
+**Alcance:** hallazgo confirmado en el laboratorio 11.4; no implica un defecto general del runtime ni de la región.

@@ -5,7 +5,6 @@ Curso práctico y progresivo para aprender **SAP Integration Suite**, con foco i
 ## Objetivo
 
 Partir desde una cuenta SAP BTP Trial sin configurar y avanzar, mediante microaprendizajes y laboratorios, hasta construir integraciones con patrones y funcionalidades habituales de SAP Cloud Integration.
-
 El criterio de avance no es solamente leer un tema: un tema se considera completado cuando su ejercicio fue ejecutado y validado.
 
 ## Estados
@@ -34,7 +33,7 @@ El criterio de avance no es solamente leer un tema: un tema se considera complet
 | 08 | Content Enricher y Request-Reply | ✅ `Completado` | 08.1 Request-Reply GET validado; 08.2 enriquecimiento POST JSON → XML validado (HTTP 200). 08.3 Headers y Exchange Properties y 08.4 Manejo de errores con Exception Subprocess. |
 | 09 | Routing: Router y condiciones | ✅ `Completado` | 09.1 Router con headers; 09.2 Exchange Properties; 09.3 ruta DEFAULT; 09.4 XPath sobre XML; 09.5 routing combinado. Cinco laboratorios validados mediante despliegue y pruebas en Postman. Evidencias documentadas en el archivo del tema. |
 | 10 | Splitter, Gather y procesamiento de colecciones | ✅ `Completado` | General Splitter, Procesamiento individual,  Gather, Casos especiales|
-| 11 | Formatos JSON, XML y conversores | ⬜ `Pendiente` | — |
+| 11 | Formatos JSON, XML y conversores | ✅ `Completado` | Estructura JSON y XML, JSON to XML Converter,  XML to JSON Converter, Estructuras complejas, Validaciones y casos especiales|
 | 12 | Groovy Script: cuándo usarlo y cuándo evitarlo | ⬜ `Pendiente` | — |
 | 13 | Manejo de errores y Exception Subprocess | ⬜ `Pendiente` | — |
 | 14 | Monitorización, MPL y trazabilidad | ⬜ `Pendiente` | — |
@@ -57,7 +56,6 @@ Los comportamientos inesperados, incidentes de Trial, errores reproducibles y re
 ## Metodología
 
 Cada tema se desarrolla como un microaprendizaje: objetivo breve, conceptos mínimos, laboratorio guiado, validación observable y registro del estado. Cuando corresponda, se documentan capturas reales del laboratorio.
-
 La guía que define cómo debe desarrollarse el curso está en [INSTRUCCIONES.md](INSTRUCCIONES.md).
 
 ## Entorno inicial del laboratorio

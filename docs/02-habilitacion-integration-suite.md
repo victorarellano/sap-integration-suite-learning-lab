@@ -34,24 +34,24 @@ utilizado para acceder a endpoints de integración.
 ### Suscripción de Integration Suite
 
 ![Integration Suite
-subscribed](images/03-integration-suite-subscribed.png)
+subscribed](images/tema-02/03-integration-suite-subscribed.png)
 
 ### Role Collections
 
-![Role collections](images/04-role-collections.png)
+![Role collections](images/tema-02/04-role-collections.png)
 
 ### Activación de capabilities
 
-![Activate capabilities](images/05-activate-capabilities.png)
+![Activate capabilities](images/tema-02/05-activate-capabilities.png)
 
 ### Process Integration Runtime
 
 ![Process Integration
-Runtime](images/06-process-integration-runtime.png)
+Runtime](images/tema-02/06-process-integration-runtime.png)
 
 ### Instancia de runtime operativa
 
-![Runtime instance usable](images/07-runtime-instance-usable.png)
+![Runtime instance usable](images/tema-02/07-runtime-instance-usable.png)
 
 ## Modelo conceptual
 

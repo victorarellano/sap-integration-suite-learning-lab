@@ -58,11 +58,11 @@ Content-Type: application/json
 
 ### Evidencia del diseñador
 
-![iFlow designer](images/08-iflow-designer.png)
+![iFlow designer](images/tema-03/08-iflow-designer.png)
 
 ### Seguridad del HTTPS Sender
 
-![HTTPS sender role](images/09-https-sender-role.png)
+![HTTPS sender role](images/tema-03/09-https-sender-role.png)
 
 ## OAuth Client Credentials
 
@@ -79,14 +79,14 @@ grant_type=client_credentials
 El token devuelto incluyó el scope asociado a `ESBMessaging.send`,
 confirmando que el cliente tenía la autorización requerida.
 
-![Token request](images/10-postman-token-request.png)
+![Token request](images/tema-03/10-postman-token-request.png)
 
 ## Invocación del iFlow
 
 Se creó `Call Runtime Test` utilizando el endpoint exacto publicado por
 Cloud Integration y autenticación Bearer.
 
-![Bearer token oculto](images/11-postman-call-bearer-hidden.png)
+![Bearer token oculto](images/tema-03/11-postman-call-bearer-hidden.png)
 
 Para evitar copiar manualmente el token en cada prueba, la petición de
 token incorporó un script Post-response:
@@ -105,7 +105,7 @@ y la petición del iFlow pasó a utilizar:
 ```
 
 ![Variable compartida entre
-requests](images/12-postman-shared-token-variable.png)
+requests](images/tema-03/12-postman-shared-token-variable.png)
 
 ## Qué quedó demostrado
 

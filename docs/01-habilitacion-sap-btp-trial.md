@@ -27,11 +27,11 @@ Trial en AWS, región **US East (VA)**, y se utilizó el space `dev`.
 
 ### Inicio del Trial
 
-![Inicio de SAP BTP Trial](images/01-trial-inicio.png)
+![Inicio de SAP BTP Trial](images/tema-01/01-trial-inicio.png)
 
 ### Cloud Foundry y space de desarrollo
 
-![Cloud Foundry space dev](images/02-cloud-foundry-space-dev.png)
+![Cloud Foundry space dev](images/tema-01/02-cloud-foundry-space-dev.png)
 
 ## Resultado validado
 
