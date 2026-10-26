@@ -362,3 +362,40 @@ La respuesta valida el recorrido funcional de la solicitud y la construcción de
 **Evidencia:** capturas del editor Groovy, *Upgrade Readiness Checks*, *Monitor Message Processing*, despliegue de la versión 1.0.2 y respuesta HTTP 200 en Postman del laboratorio 08.2. Las rutas de estas capturas no se especifican porque no se ha confirmado su nombre definitivo en el repositorio.
 
 **Relacionado con:** KBA-LAB-007 — `java.lang.String.call()` en Groovy MarkupBuilder; Laboratorio 08.2 — Content Enricher y Request-Reply.
+
+
+# Hallazgo — Router no compatible con Gather en el diseño probado
+
+**Fecha:** 2026-10-23
+**Módulo:** 10.3 — Gather
+**Estado:** Solución validada en laboratorio
+
+## Síntoma
+
+El validador del iFlow `CPI_LAB_10_Splitter_Gather` mostró:
+
+`You cannot use Router with gather; use gather after splitter or join`
+
+## Contexto
+
+Se intentó conectar las salidas de un Router, tras sendos Content Modifiers, a un Gather común para agregar los mensajes generados por un General Splitter.
+
+## Diagnóstico
+
+El validador rechazó la topología Router → Gather utilizada en este laboratorio. El mensaje no demuestra que todas las combinaciones posibles de Router y Gather sean incompatibles.
+
+## Solución validada
+
+Se conservó la versión anterior del trabajo con Router y se sustituyó el diseño activo por:
+
+`HTTPS Sender → Start → General Splitter → Gather → End`
+
+Gather se configuró con `XML (Same Format)` y `Combine`. Tras desplegar, Postman devolvió `200 OK` y un XML `multimap:Messages` con los tres pedidos; Trace confirmó el payload consolidado.
+
+## Alcance
+
+Hallazgo observado en el editor y runtime del tenant utilizado para el laboratorio 10.3. No se ha evaluado la alternativa con Join ni otras topologías.
+
+## Evidencias
+
+Consultar `10-16-gather-router-incompatible.png`, `10-17-gather-arquitectura-corregida.png`, `10-18-gather-postman-resultado.png` y `10-19-gather-trace-consolidacion.png` en el documento del módulo 10.
