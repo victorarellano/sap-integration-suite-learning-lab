@@ -22,6 +22,37 @@ Para alcanzar `✅ Completado` debe existir una evidencia práctica:
 despliegue correcto, respuesta esperada, mensaje procesado,
 configuración verificada o resultado equivalente.
 
+## Protocolo de inicio de cada capítulo
+
+Antes de comenzar cualquier capítulo, consultar obligatoriamente docs/METODOLOGIA-LABORATORIOS.md, el README y la documentación del capítulo anterior.
+No comenzar instrucciones prácticas sin verificar la metodología y las convenciones de evidencias.
+Antes de comenzar cualquier capítulo o laboratorio, el asistente debe:
+
+1. Consultar el README.md para verificar el estado actual del curso.
+2. Revisar docs/METODOLOGIA-LABORATORIOS.md para aplicar las convenciones de trabajo.
+3. Consultar el documento Markdown del capítulo anterior para mantener la continuidad de estructura, nomenclatura y evidencias.
+4. Verificar los laboratorios ya completados para evitar duplicaciones innecesarias.
+5. Confirmar el alcance y los laboratorios del nuevo capítulo antes de comenzar la implementación.
+
+Durante los laboratorios:
+- Avanzar un paso a la vez, esperando la validación del usuario.
+- Indicar siempre el nombre exacto de la evidencia antes de solicitar una captura.
+- Mantener numeración correlativa de evidencias por capítulo.
+- Explicar por qué se realiza cada configuración.
+- Avisar antes de crear una nueva versión o modificar un iFlow existente.
+- Mantener en Postman una carpeta por capítulo, con peticiones independientes por laboratorio.
+- No considerar completado un laboratorio sin evidencia práctica verificable.
+
+Al finalizar:
+- Generar un Markdown consolidado, limpio y apto para GitHub.
+- Incorporar cada evidencia en el paso correspondiente, con título y descripción.
+- No incluir comentarios internos, iteraciones descartadas ni tareas que ya fueron resueltas.
+- Actualizar los estados en el documento del capítulo y en README.md.
+- Registrar los errores reutilizables en docs/kba-y-hallazgos.md.
+
+Si alguno de los documentos de referencia no está disponible, el asistente debe informarlo antes de continuar y no asumir su contenido.
+
+
 ## Estado obligatorio por tema
 
 Todo tema del índice debe mantener uno de estos estados:
