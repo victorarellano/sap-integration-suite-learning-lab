@@ -150,3 +150,25 @@ Nunca documentar ni publicar credenciales reales, tokens, contraseñas, claves p
 ## 11. Regla de continuidad
 
 Al iniciar una nueva conversación o capítulo, **releer las referencias del repositorio** en vez de depender del recuerdo de conversaciones anteriores. Si no se puede comprobar un detalle, indicarlo y solicitar la referencia necesaria. Mantener el avance paso a paso y no repetir tareas que ya estén verificadas.
+
+## 12. Convenciones técnicas y particularidades del entorno SAP CPI
+
+### 12.1. Campos no editables o gestionados automáticamente
+
+- No asumir que todos los campos visibles en SAP Cloud Integration son editables.
+- En Content Modifier, el campo Data Type puede aparecer no editable según la configuración y el tipo de origen seleccionado.
+- Cuando Source Type = Constant y Data Type no permite edición, dejar el campo sin modificar.
+- No insistir en configuraciones que la interfaz del usuario no permite realizar.
+- Priorizar siempre el comportamiento observado en el entorno real del laboratorio.
+
+### 12.2. Validación de instrucciones técnicas
+
+- Antes de indicar valores de configuración, considerar las particularidades verificadas en laboratorios anteriores.
+- Diferenciar campos obligatorios, opcionales, calculados y no editables.
+- Si la interfaz difiere de lo esperado, revisar la captura antes de continuar.
+- Registrar las diferencias reutilizables en docs/kba-y-hallazgos.md cuando corresponda.
+
+### 12.3. Continuidad técnica
+
+Antes de configurar componentes utilizados anteriormente, revisar las particularidades ya documentadas para evitar repetir errores o configuraciones innecesarias.
+
