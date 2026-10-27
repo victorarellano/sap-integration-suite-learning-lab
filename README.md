@@ -34,7 +34,7 @@ El criterio de avance no es solamente leer un tema: un tema se considera complet
 | 09 | Routing: Router y condiciones | ✅ `Completado` | 09.1 Router con headers; 09.2 Exchange Properties; 09.3 ruta DEFAULT; 09.4 XPath sobre XML; 09.5 routing combinado. Cinco laboratorios validados mediante despliegue y pruebas en Postman. Evidencias documentadas en el archivo del tema. |
 | 10 | Splitter, Gather y procesamiento de colecciones | ✅ `Completado` | General Splitter, Procesamiento individual,  Gather, Casos especiales|
 | 11 | Formatos JSON, XML y conversores | ✅ `Completado` | Estructura JSON y XML, JSON to XML Converter,  XML to JSON Converter, Estructuras complejas, Validaciones y casos especiales|
-| 12 | Groovy Script: cuándo usarlo y cuándo evitarlo | ⬜ `Pendiente` | — |
+| 12 | Groovy Script: cuándo usarlo y cuándo evitarlo | 🟨 `En curso` | — |
 | 13 | Manejo de errores y Exception Subprocess | ⬜ `Pendiente` | — |
 | 14 | Monitorización, MPL y trazabilidad | ⬜ `Pendiente` | — |
 | 15 | Seguridad: OAuth, Basic, certificados y Security Material | ⬜ `Pendiente` | — |
