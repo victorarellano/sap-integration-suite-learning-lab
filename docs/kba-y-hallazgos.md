@@ -418,3 +418,22 @@ Consultar `10-16-gather-router-incompatible.png`, `10-17-gather-arquitectura-cor
 **Aprendizaje:** el procesamiento interno `Completed` no garantiza la entrega correcta de la respuesta HTTP. Revisar los headers y los mensajes del router ante errores 502.
 
 **Alcance:** hallazgo confirmado en el laboratorio 11.4; no implica un defecto general del runtime ni de la región.
+
+
+## KBA-LAB-011 — Header HTTP personalizado no disponible en Groovy sin Allowed Headers
+
+**Origen:** Laboratorio 12.2 — Headers, Properties y Body.
+**Estado:** Resuelto y validado mediante Postman (27-10-2026).
+**Artefacto:** `LAB12_02_Groovy_Headers_Properties_Body`.
+
+**Síntoma:** Postman enviaba el header `X-Origen: Postman`, pero la respuesta del iFlow mostraba `"origen": "No informado"`. El resto de la transformación funcionaba y la solicitud devolvía HTTP 200.
+
+**Diagnóstico:** el script leía `message.getHeader("X-Origen", String)` y aplicaba el valor alternativo cuando el header no estaba disponible. Se revisó la configuración de **Integration Flow → Runtime Configuration → Allowed Header(s)**.
+
+**Solución verificada:** incorporar `X-Origen` a **Allowed Header(s)**, aplicar la configuración y volver a ejecutar la petición. La respuesta posterior devolvió `"origen": "Postman"` y 4/4 pruebas Postman exitosas.
+
+**Alcance:** validado en este iFlow y en el entorno de laboratorio. No se afirma que sea la única causa posible de headers ausentes en otros escenarios.
+
+**Aprendizaje:** para consumir headers HTTP personalizados en el procesamiento del iFlow, revisar la lista de headers permitidos y comprobar su recepción con una aserción funcional.
+
+**Evidencia:** `docs/images/tema-12/12-21-postman-headers-properties-body-validado.png` y `docs/images/tema-12/12-22-postman-tests-headers-properties-body.png`.
