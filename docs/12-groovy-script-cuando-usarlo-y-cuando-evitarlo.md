@@ -859,21 +859,156 @@ El Router requiere una estructura XML y una condición XPath coherentes. La prue
 
 ---
 
-## Validación acumulada del capítulo 12 — Actualización
 
-| Laboratorio | Evidencia práctica | Estado |
-|---|---|---|
-| 12.1 | Started, longitud 33, HTTP 200, 4/4 tests | ✅ Completado |
-| 12.2 | Started, headers/properties/body, HTTP 200, 4/4 tests | ✅ Completado |
-| 12.3 XML | Started, total 67500, HTTP 200, 4/4 tests | ✅ Completado |
-| 12.3 JSON | Started, total numérico 67500, HTTP 200, tests aprobados | ✅ Completado |
-| 12.4 | Started 1.0.1; 0 %, 5 %, 10 % y rechazo; 10/10 tests en cuatro peticiones | ✅ Completado |
-| 12.5 | Started 1.0.1; dos rutas, HTTP 200, 8/8 tests en dos peticiones | ✅ Completado |
-| 12.6 | Buenas prácticas y validación final | ⬜ Pendiente |
+## 12.6 — Buenas prácticas y validación: Groovy + Router XPath
 
-**Estado del capítulo 12:** 🟨 En curso.
+**Estado:** ✅ Completado
+**iFlow:** `LAB12_06_Groovy_Router_Buenas_Practicas`
+**Package:** `CPI Learning Lab`
+**Endpoint relativo:** `/http/lab12/buenas-practicas`
+**Postman:** `CPI Learning Lab / Lab 12 Groovy Script`, cuatro peticiones independientes del laboratorio 12.6.
+
+### Objetivo
+
+Combinar Groovy para calcular reglas de negocio con componentes nativos de SAP Cloud Integration para transformar, clasificar y devolver una respuesta enriquecida. Verificar por separado el cálculo de descuentos, la selección de rutas y el rechazo funcional de pedidos sin productos.
+
+### Conceptos y decisiones de diseño
+
+- **Groovy Script:** interpreta el pedido JSON, comprueba la lista de productos y calcula `totalOriginal`, `porcentajeDescuento`, `descuento` y `totalFinal` con `BigDecimal`. Aplica 5 % cuando el total original es al menos 50.000 y menor que 100.000; 10 % cuando es al menos 100.000; 0 % en otro caso.
+- **JSON to XML Converter:** transforma el JSON resultante de Groovy a XML con elemento raíz `root`, permitiendo evaluar el importe mediante XPath.
+- **Router XPath:** clasifica como `PEDIDO_PRIORITARIO` cuando `/root/totalFinal >= 50000`. La ruta predeterminada genera `PEDIDO_NORMAL`. Este umbral se aplica **al total final**, no al total original usado para decidir el porcentaje de descuento.
+- **Content Modifier y Exchange Properties:** cada rama extrae los importes desde el XML mediante XPath y construye la respuesta JSON usando expresiones Camel Simple `${property.Nombre}`. La condición del Router sigue siendo XPath sobre XML: no depende de las Exchange Properties.
+- **Separación de responsabilidades:** Groovy calcula; el Router decide; los Content Modifiers construyen la respuesta. Para clasificaciones simples basadas en un importe ya calculado, un Router nativo evita añadir código innecesario.
+
+### Prerrequisitos
+
+HTTPS Sender y OAuth operativos, conocimientos de Groovy, JSON/XML, XPath, Router, Content Modifier, Exchange Properties y pruebas de Postman de los laboratorios anteriores.
+
+### Laboratorio paso a paso
+
+#### 1. Construir el flujo de integración
+
+Crear `LAB12_06_Groovy_Router_Buenas_Practicas` en `CPI Learning Lab` y configurar el HTTPS Sender en `/lab12/buenas-practicas`, con autorización `User Role` y rol `ESBMessaging.send`. Incorporar la secuencia:
+
+`HTTPS Sender → Start → Evaluar Reglas Negocio (Groovy) → Convertir Pedido JSON a XML → Clasificar Pedido (Router) → Content Modifier de cada ruta → End`.
+
+Reutilizar la lógica de reglas de negocio comprobada en 12.4; el Groovy devuelve un JSON con los importes calculados y utiliza el código HTTP 400 cuando el pedido no contiene productos. El conversor añade la raíz XML `root`.
+
+**Motivo:** la transformación permite aplicar XPath sobre los valores producidos por Groovy, mientras que las dos ramas mantienen independiente la representación de la respuesta.
+
+**Evidencia 12-71 — Arquitectura del iFlow.** Se observa la combinación de Groovy, conversor, Router y dos Content Modifiers.
+
+![Evidencia 12-71 — Arquitectura final del iFlow](images/tema-12/12-71-iflow-groovy-router-final.png)
+
+#### 2. Configurar la clasificación mediante XPath
+
+Configurar la ruta `Ruta_Prioritaria` con `Expression Type = XML` y condición:
+
+```xpath
+/root/totalFinal >= 50000
+```
+
+Configurar `Ruta_Normal` como ruta predeterminada. Ambas rutas terminan en el evento End.
+
+**Motivo:** un pedido puede recibir descuento del 5 % y seguir siendo prioritario; el descuento y la clasificación son decisiones de negocio distintas.
+
+**Evidencia 12-72 — Condición XPath de prioridad.** Se verifica el umbral de 50.000 sobre `totalFinal`.
+
+![Evidencia 12-72 — Router XPath prioritario](images/tema-12/12-72-router-xpath-prioritario.png)
+
+#### 3. Conservar los importes en la respuesta
+
+En los Content Modifiers `CM_Respuesta_Prioritaria` y `CM_Respuesta_Normal`, crear las siguientes Exchange Properties con `Source Type = XPath`:
+
+| Nombre | Source Value |
+|---|---|
+| `TotalOriginal` | `/root/totalOriginal` |
+| `PorcentajeDescuento` | `/root/porcentajeDescuento` |
+| `Descuento` | `/root/descuento` |
+| `TotalFinal` | `/root/totalFinal` |
+
+En `Message Body`, utilizar `Type = Expression` y las referencias `${property.TotalOriginal}`, `${property.PorcentajeDescuento}`, `${property.Descuento}` y `${property.TotalFinal}`. Cada rama fija el valor de `clasificacion` que le corresponde y conserva el header `Content-Type: application/json`.
+
+La respuesta de un pedido aprobado sigue esta estructura:
+
+```json
+{
+  "clasificacion": "PEDIDO_PRIORITARIO",
+  "procesamiento": "Componentes nativos CPI",
+  "laboratorio": "12.6",
+  "totalOriginal": "67500",
+  "porcentajeDescuento": "5.00",
+  "descuento": "3375.00",
+  "totalFinal": "64125.00"
+}
+```
+
+**Motivo:** los Content Modifiers sustituyen el body del mensaje. Extraer primero los valores evita perder los importes calculados por Groovy. Las referencias a Exchange Properties distinguen mayúsculas y minúsculas. Los importes se presentan como cadenas JSON en la respuesta de este ejercicio.
+
+#### 4. Desplegar y verificar el endpoint
+
+Guardar y desplegar el iFlow. En `Manage Integration Content`, verificar el estado `Started` y el endpoint `/http/lab12/buenas-practicas`. El despliegue se valida además mediante peticiones reales a Postman; `Started` por sí solo no demuestra el resultado funcional.
+
+**Evidencia 12-73 — Despliegue operativo.** El artefacto aparece iniciado y el endpoint está publicado.
+
+![Evidencia 12-73 — iFlow iniciado](images/tema-12/12-73-iflow-groovy-router-started.png)
+
+#### 5. Validar los cuatro escenarios con Postman
+
+Ejecutar cuatro peticiones POST independientes, autenticadas y con `Content-Type: application/json`.
+
+| Escenario | Entrada | HTTP observado | Resultado observado | Tests |
+|---|---|---|---|---|
+| Descuento 5 % — Prioritaria | 15.000×2 + 8.500×3 + 12.000×1 | 200 | Original 67.500; 5 %; descuento 3.375; final 64.125; `PEDIDO_PRIORITARIO` | 4/4 |
+| Sin descuento — Normal | 15.000×1 + 8.000×3 + 9.000×1 | 200 | Original 48.000; 0 %; descuento 0; final 48.000; `PEDIDO_NORMAL` | 4/4 |
+| Descuento 10 % — Prioritario | 40.000×2 + 20.000×2 | 200 | Original 120.000; 10 %; descuento 12.000; final 108.000; `PEDIDO_PRIORITARIO` | 4/4 |
+| Sin productos | `"productos": []` | 400 | Rechazo funcional HTTP; body observado con `PEDIDO_NORMAL` e importes vacíos | 4/4 |
+
+**Evidencia 12-76 — Descuento del 5 % y pedido prioritario.** Se comprueban el total final 64.125, la clasificación prioritaria y las cuatro pruebas aprobadas.
+
+![Evidencia 12-76 — Descuento 5 % prioritario](images/tema-12/12-76-postman-descuento-5-prioritario.png)
+
+**Evidencia 12-77 — Pedido normal sin descuento.** Se comprueban el total 48.000, el descuento cero y las cuatro pruebas aprobadas.
+
+![Evidencia 12-77 — Sin descuento normal](images/tema-12/12-77-postman-sin-descuento-normal.png)
+
+**Evidencia 12-78 — Descuento del 10 % y pedido prioritario.** Se comprueban el total final 108.000, la clasificación prioritaria y las cuatro pruebas aprobadas.
+
+![Evidencia 12-78 — Descuento 10 % prioritario](images/tema-12/12-78-postman-descuento-10-prioritario.png)
+
+**Evidencia 12-79 — Pedido sin productos.** Se comprueban el HTTP 400 y las cuatro aserciones aprobadas. La captura también evidencia que el body de respuesta no conserva el mensaje de rechazo estructurado de Groovy.
+
+![Evidencia 12-79 — Sin productos](images/tema-12/12-79-postman-sin-productos.png)
+
+### Resultado esperado y validación
+
+El iFlow debe calcular descuentos, clasificar según el total final y responder a los cuatro escenarios de Postman. Se comprobaron los tres casos de aprobación (HTTP 200, importes y clasificación) y el caso sin productos (HTTP 400), con **16/16 aserciones aprobadas** en cuatro peticiones. **Estado del laboratorio: ✅ Completado.**
+
+### Problemas encontrados y aprendizajes
+
+- El uso de `${xpath:/root/...}` dentro de `Message Body / Type = Expression` produjo `SimpleParserException: Unknown function: xpath:/root/totalOriginal/text()` durante el despliegue. En esta implementación, XPath se utilizó como origen de Exchange Properties y `${property.Nombre}` para construir el body.
+- Las referencias a propiedades distinguen mayúsculas y minúsculas. En las trazas se observaron propiedades con valores correctos y respuestas vacías cuando los nombres utilizados en el body no coincidían.
+- La ruta prioritaria utiliza **50.000** como umbral del total final; el umbral de **100.000** corresponde al descuento del 10 % calculado sobre el total original. Confundirlos altera las expectativas de Postman.
+- En el escenario sin productos, el código HTTP 400 se conserva, pero la respuesta pasa por la ruta normal y reemplaza el body con campos vacíos. Esto **no valida la conservación de un JSON de rechazo estructurado**; ese diseño se puede mejorar en el capítulo de manejo de errores.
+- La diferencia entre el texto del editor en distintas revisiones no permite atribuir un fallo de persistencia al runtime sin una reproducción controlada.
 
 ### Referencias
 
 - [SAP Help Portal — Cloud Integration](https://help.sap.com/docs/integration-suite/sap-integration-suite/cloud-integration)
+- [Apache Camel — Simple Language](https://camel.apache.org/components/latest/languages/simple-language.html)
 - [Apache Camel — XPath Language](https://camel.apache.org/components/latest/languages/xpath-language.html)
+
+---
+
+## Validación acumulada del capítulo 12 — Estado final
+
+| Laboratorio | Evidencia práctica | Estado |
+|---|---|---|
+| 12.1 | Started, longitud de body y 4/4 tests | ✅ Completado |
+| 12.2 | Headers, properties y body; HTTP 200 y 4/4 tests | ✅ Completado |
+| 12.3 XML | XML procesado; total 67.500 y 4/4 tests | ✅ Completado |
+| 12.3 JSON | JSON procesado; total numérico 67.500 y tests aprobados | ✅ Completado |
+| 12.4 | Reglas de negocio: 0 %, 5 %, 10 % y rechazo funcional | ✅ Completado |
+| 12.5 | Alternativas nativas: dos rutas, HTTP 200 y 8/8 tests | ✅ Completado |
+| 12.6 | Groovy + Router XPath: tres aprobaciones y rechazo HTTP 400, 16/16 tests | ✅ Completado |
+

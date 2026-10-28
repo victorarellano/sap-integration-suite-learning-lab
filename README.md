@@ -34,7 +34,7 @@ El criterio de avance no es solamente leer un tema: un tema se considera complet
 | 09 | Routing: Router y condiciones | ✅ `Completado` | 09.1 Router con headers; 09.2 Exchange Properties; 09.3 ruta DEFAULT; 09.4 XPath sobre XML; 09.5 routing combinado. Cinco laboratorios validados mediante despliegue y pruebas en Postman. Evidencias documentadas en el archivo del tema. |
 | 10 | Splitter, Gather y procesamiento de colecciones | ✅ `Completado` | General Splitter, Procesamiento individual,  Gather, Casos especiales|
 | 11 | Formatos JSON, XML y conversores | ✅ `Completado` | Estructura JSON y XML, JSON to XML Converter,  XML to JSON Converter, Estructuras complejas, Validaciones y casos especiales|
-| 12 | Groovy Script: cuándo usarlo y cuándo evitarlo | 🟨 `En curso` | 12.1 Fundamentos (4/4 tests); 12.2 Headers, Properties y Body (4/4); 12.3 XML (HTTP 200, total 67500, 4/4); 12.3 JSON (HTTP 200, total numérico 67500, tests aprobados). Pendientes reglas de negocio, alternativas nativas y buenas prácticas. |
+| 12 | [Groovy Script: cuándo usarlo y cuándo evitarlo](docs/12-groovy-script-cuando-usarlo-y-cuando-evitarlo.md) | ✅ `Completado` | 12.1 Fundamentos; 12.2 Headers, Properties y Body; 12.3 XML/JSON; 12.4 Reglas de negocio (0 %, 5 %, 10 % y rechazo); 12.5 Alternativas nativas (dos rutas, 8/8 tests); 12.6 Groovy + Router XPath (descuentos, clasificación y HTTP 400, 16/16 tests). |
 | 13 | Manejo de errores y Exception Subprocess | ⬜ `Pendiente` | — |
 | 14 | Monitorización, MPL y trazabilidad | ⬜ `Pendiente` | — |
 | 15 | Seguridad: OAuth, Basic, certificados y Security Material | ⬜ `Pendiente` | — |
