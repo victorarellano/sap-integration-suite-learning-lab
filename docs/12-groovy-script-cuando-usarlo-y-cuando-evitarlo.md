@@ -538,18 +538,342 @@ El procesamiento JSON quedó validado con HTTP 200, respuesta con los tres campo
 
 ---
 
-## Validación acumulada del capítulo
 
-| Laboratorio | iFlow | Validación práctica | Estado |
-|---|---|---|---|
-| 12.1 | `LAB12_01_Groovy_Fundamentos` | Started, HTTP 200, longitud 33, 4/4 tests | ✅ Completado |
-| 12.2 | `LAB12_02_Groovy_Headers_Properties_Body` | Started, HTTP 200, header permitido, longitud 15, transformación, 4/4 tests | ✅ Completado |
-| 12.3 (XML) | `LAB12_03_Groovy_Procesamiento_XML` | Started 1.0.2, HTTP 200, total 67500, 4/4 tests | ✅ Completado |
-| 12.3 (JSON) | `LAB12_03_Groovy_Procesamiento_JSON` | Started 1.0.0, HTTP 200, total numérico 67500, tests Postman aprobados | ✅ Completado |
+## 12.4 — Reglas de negocio con Groovy
 
-**Estado del tema 12:** 🟨 En curso. Los laboratorios de reglas de negocio, alternativas nativas y buenas prácticas todavía no están validados.
+**Estado:** ✅ Completado
+**iFlow:** `LAB12_04_Groovy_Reglas_Negocio`
+**Versión desplegada observada:** `1.0.1`
+**Endpoint relativo:** `/http/lab12/groovy/reglas-negocio`
+**Postman:** carpeta `Lab 12 Groovy Script`, cuatro peticiones independientes para 0 %, 5 %, 10 % y rechazo.
 
-## Referencias
+### Objetivo y conceptos
+
+Aplicar reglas condicionales a un pedido JSON, calcular el total y los descuentos con `BigDecimal`, validar que exista una lista de productos y generar respuestas JSON con `JsonSlurper` y `JsonOutput`. El procesamiento se realiza en un Groovy Script para contrastarlo después con alternativas nativas.
+
+### Prerrequisitos
+
+iFlows y autenticación HTTPS/OAuth operativos; lectura de JSON con `Reader` y cálculo de importes practicados en 12.3.
+
+### Laboratorio paso a paso
+
+#### 1. Crear el iFlow
+
+Crear `LAB12_04_Groovy_Reglas_Negocio` en `CPI Learning Lab` con Start → End, sin modificar el iFlow del laboratorio 12.3.
+
+**Evidencia 12-44 — iFlow creado.** Se observa el nuevo artefacto antes del despliegue.
+
+![Evidencia 12-44 — iFlow de reglas de negocio](images/tema-12/12-44-iflow-reglas-negocio-creado.png)
+
+#### 2. Configurar el HTTPS Sender
+
+Conectar Sender con Start mediante HTTPS, dirección `/lab12/groovy/reglas-negocio`, autorización `User Role`, rol `ESBMessaging.send` y CSRF desactivado para el ejercicio autenticado.
+
+**Motivo:** exponer una ruta independiente para ejecutar pedidos desde Postman.
+
+**Evidencia 12-45 — HTTPS Sender.** Dirección y autorización configuradas.
+
+![Evidencia 12-45 — HTTPS Sender](images/tema-12/12-45-https-sender-reglas-negocio.png)
+
+#### 3. Incorporar Groovy Script
+
+Insertar el componente `Evaluar Reglas Negocio` entre Start y End. Crear el recurso `GRV_EvaluarReglasNegocio.groovy`.
+
+**Evidencia 12-46 — Paso Groovy.** Componente incorporado al flujo.
+
+![Evidencia 12-46 — Paso Groovy](images/tema-12/12-46-groovy-componente-reglas-negocio.png)
+
+#### 4. Implementar las reglas
+
+Usar el siguiente script:
+
+```groovy
+import com.sap.gateway.ip.core.customdev.util.Message
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+
+def Message processData(Message message) {
+    def pedido = new JsonSlurper().parse(message.getBody(java.io.Reader))
+    def productos = pedido.productos
+
+    if (!(productos instanceof List) || productos.isEmpty()) {
+        def respuesta = [
+            estado: "RECHAZADO",
+            motivo: "El pedido debe contener productos"
+        ]
+        message.setBody(JsonOutput.toJson(respuesta))
+        message.setHeader("Content-Type", "application/json")
+        message.setHeader("CamelHttpResponseCode", 400)
+        return message
+    }
+
+    BigDecimal total = BigDecimal.ZERO
+    productos.each { producto ->
+        BigDecimal precio = new BigDecimal(producto.precio.toString())
+        BigDecimal cantidad = new BigDecimal(producto.cantidad.toString())
+        total += precio * cantidad
+    }
+
+    BigDecimal porcentaje = BigDecimal.ZERO
+    if (total >= 100000) {
+        porcentaje = 0.10G
+    } else if (total >= 50000) {
+        porcentaje = 0.05G
+    }
+
+    BigDecimal descuento = total * porcentaje
+    BigDecimal totalFinal = total - descuento
+    def respuesta = [
+        idPedido: pedido.id,
+        cliente: pedido.cliente,
+        estado: "APROBADO",
+        totalOriginal: total,
+        porcentajeDescuento: porcentaje * 100,
+        descuento: descuento,
+        totalFinal: totalFinal
+    ]
+    message.setBody(JsonOutput.toJson(respuesta))
+    message.setHeader("Content-Type", "application/json")
+    return message
+}
+```
+
+**Motivo:** `Reader` permite leer el JSON sin materializar previamente una cadena adicional; `BigDecimal` evita el uso de aritmética binaria de punto flotante para importes. Los umbrales son reglas didácticas. El script presupone precios y cantidades numéricos válidos; la validación exhaustiva de entradas se tratará en el capítulo de errores.
+
+**Evidencia 12-47 — Código Groovy.** Recurso con reglas de descuento y rechazo.
+
+![Evidencia 12-47 — Código Groovy](images/tema-12/12-47-groovy-codigo-reglas-negocio.png)
+
+#### 5. Asociar el recurso y desplegar
+
+En el paso Groovy, seleccionar `/script/GRV_EvaluarReglasNegocio.groovy` y función `processData`. Guardar y desplegar. En Manage Integration Content se observó estado `Started` y versión `1.0.1`.
+
+**Evidencia 12-48 — Recurso asociado.** Script File y Script Function configurados.
+
+![Evidencia 12-48 — Recurso asociado](images/tema-12/12-48-groovy-recurso-asociado-reglas-negocio.png)
+
+**Evidencia 12-49 — Despliegue.** iFlow iniciado y endpoint publicado.
+
+![Evidencia 12-49 — Started](images/tema-12/12-49-iflow-reglas-negocio-started.png)
+
+#### 6. Validar reglas con Postman
+
+Enviar peticiones POST autenticadas, `Content-Type: application/json`, con los siguientes escenarios:
+
+| Escenario | Entrada representativa | HTTP | Resultado observado | Tests |
+|---|---|---|---|---|
+| Descuento 5 % | Productos 15000×2, 8500×3, 12000×1 | 200 | Total 67500; descuento 3375; total final 64125 | 3/3 |
+| Descuento 10 % | Productos 40000×2, 20000×2 | 200 | Total 120000; descuento 12000; total final 108000 | 3/3 |
+| Sin productos | `"productos": []` | 400 | `RECHAZADO`; motivo `El pedido debe contener productos` | 2/2 |
+| Sin descuento | Productos 10000×2, 5000×3 | 200 | Total 35000; descuento 0; total final 35000 | 2/2 |
+
+**Evidencia 12-50 — Descuento 5 %.** Respuesta HTTP 200 y cálculo de 64125.
+
+![Evidencia 12-50 — Descuento 5 %](images/tema-12/12-50-postman-reglas-negocio-descuento-5.png)
+
+**Evidencia 12-51 — Tests del 5 %.** Tres pruebas Postman aprobadas.
+
+![Evidencia 12-51 — Tests 5 %](images/tema-12/12-51-postman-reglas-negocio-tests-5.png)
+
+**Evidencia 12-52 — Descuento 10 %.** Respuesta HTTP 200 y cálculo de 108000.
+
+![Evidencia 12-52 — Descuento 10 %](images/tema-12/12-52-postman-reglas-negocio-descuento-10.png)
+
+**Evidencia 12-53 — Tests del 10 %.** Tres pruebas Postman aprobadas.
+
+![Evidencia 12-53 — Tests 10 %](images/tema-12/12-53-postman-reglas-negocio-tests-10.png)
+
+**Evidencia 12-54 — Pedido sin productos.** HTTP 400 y rechazo funcional.
+
+![Evidencia 12-54 — Pedido rechazado](images/tema-12/12-54-postman-reglas-negocio-sin-productos.png)
+
+**Evidencia 12-55 — Tests del rechazo.** Dos pruebas Postman aprobadas.
+
+![Evidencia 12-55 — Tests rechazo](images/tema-12/12-55-postman-reglas-negocio-tests-sin-productos.png)
+
+**Evidencia 12-56 — Pedido sin descuento.** HTTP 200, total final 35000.
+
+![Evidencia 12-56 — Sin descuento](images/tema-12/12-56-postman-reglas-negocio-sin-descuento.png)
+
+**Evidencia 12-57 — Tests sin descuento.** Dos pruebas Postman aprobadas. Estas pruebas comprueban estado HTTP y estructura JSON; los importes se verificaron en la respuesta.
+
+![Evidencia 12-57 — Tests sin descuento](images/tema-12/12-57-postman-reglas-negocio-tests-sin-descuento.png)
+
+### Resultado esperado y validación
+
+Los tres tramos de descuento y el rechazo de una lista vacía fueron ejecutados y comprobados. **Estado: ✅ Completado.**
+
+### Problemas encontrados y aprendizajes
+
+El ejercicio diferencia validaciones de negocio (lista vacía) de errores técnicos que requerirían manejo adicional. La respuesta HTTP 200 por sí sola no acredita que el descuento sea correcto: se contrastaron valores y aserciones Postman. El script requiere un esquema de entrada consistente.
+
+---
+
+## 12.5 — Alternativas nativas a Groovy
+
+**Estado:** ✅ Completado
+**iFlow:** `LAB12_05_Alternativas_Nativas`
+**Versión desplegada observada:** `1.0.1`
+**Endpoint relativo:** `/http/lab12/alternativas-nativas`
+**Postman:** `Lab 12 Groovy Script`, peticiones independientes de pedido prioritario y normal.
+
+### Objetivo y conceptos
+
+Clasificar pedidos sin Groovy, utilizando JSON to XML Converter, Router con condición XPath y Content Modifier para generar respuestas JSON. A diferencia del 12.4, el pedido **ya incluye `totalPedido`**: aquí se evalúa una clasificación, no se calculan descuentos.
+
+### Prerrequisitos
+
+Conocimientos previos de conversión JSON/XML, XPath, Router, Content Modifier y HTTPS Sender.
+
+### Laboratorio paso a paso
+
+#### 1. Crear el iFlow y configurar HTTPS
+
+Crear `LAB12_05_Alternativas_Nativas` en `CPI Learning Lab`, inicialmente Start → End. Configurar HTTPS Sender con dirección `/lab12/alternativas-nativas`, `User Role`, rol `ESBMessaging.send` y CSRF desactivado para el laboratorio autenticado.
+
+**Motivo:** mantener separado el ejercicio de componentes nativos y poder comparar soluciones sin modificar el 12.4.
+
+**Evidencia 12-58 — iFlow inicial.** Artefacto creado.
+
+![Evidencia 12-58 — iFlow inicial](images/tema-12/12-58-iflow-alternativas-nativas-creado.png)
+
+**Evidencia 12-59 — HTTPS Sender.** Endpoint y autorización configurados.
+
+![Evidencia 12-59 — HTTPS Sender](images/tema-12/12-59-https-sender-alternativas-nativas.png)
+
+#### 2. Convertir JSON a XML
+
+Insertar `Convertir Pedido JSON a XML`, con `Add XML Root Element` activado y nombre de raíz `root`, sin namespace mapping.
+
+Para el mensaje `{"idPedido":1005,"totalPedido":67500}`, la estructura esperada permite acceder al importe mediante `/root/totalPedido`.
+
+**Motivo:** evaluar el campo con XPath desde un Router nativo.
+
+**Evidencia 12-60 — JSON to XML Converter.** Conversor y raíz `root` configurados.
+
+![Evidencia 12-60 — Conversor](images/tema-12/12-60-json-xml-converter-alternativas-nativas.png)
+
+#### 3. Incorporar y configurar el Router
+
+Agregar `Clasificar Pedido` después del conversor. Definir `Ruta_Prioritario` con `Expression Type = XML`, condición `/root/totalPedido >= 50000` y `Default Route` desactivado. Crear `Ruta_Normal` como `Default Route` sin condición XPath.
+
+**Motivo:** separar las decisiones según el importe. La ruta predeterminada recibe los mensajes que no satisfacen la condición de prioritario. Se emplea un umbral didáctico de 50000.
+
+**Evidencia 12-61 — Router incorporado.** Componente de decisión en el flujo.
+
+![Evidencia 12-61 — Router](images/tema-12/12-61-router-alternativas-nativas.png)
+
+**Evidencia 12-62 — Ruta prioritaria.** Condición XPath y ruta no predeterminada.
+
+![Evidencia 12-62 — Condición XPath](images/tema-12/12-62-router-condicion-prioritario.png)
+
+**Evidencia 12-63 — Ruta normal.** Segunda ruta configurada como predeterminada.
+
+![Evidencia 12-63 — Default Route](images/tema-12/12-63-router-ruta-normal-default.png)
+
+#### 4. Construir las respuestas con Content Modifier
+
+En `Ruta_Prioritario`, insertar `CM_Respuesta_Prioritario`, con `Message Body / Type = Constant`:
+
+```json
+{
+  "clasificacion": "PEDIDO_PRIORITARIO",
+  "procesamiento": "Componentes nativos CPI",
+  "laboratorio": "12.5"
+}
+```
+
+En `Ruta_Normal`, insertar `CM_Respuesta_Normal`, con `Message Body / Type = Constant`:
+
+```json
+{
+  "clasificacion": "PEDIDO_NORMAL",
+  "procesamiento": "Componentes nativos CPI",
+  "laboratorio": "12.5"
+}
+```
+
+En ambos Content Modifiers crear el header `Content-Type` con `Source Type = Constant`, `Source Value = application/json`. Ambas ramas finalizan en End.
+
+**Motivo:** el Router decide el camino; cada Content Modifier produce una respuesta fija, sin código personalizado.
+
+**Evidencia 12-64 — Respuesta prioritaria.** Body JSON con clasificación `PEDIDO_PRIORITARIO`.
+
+![Evidencia 12-64 — Content Modifier prioritario](images/tema-12/12-64-content-modifier-respuesta-prioritario.png)
+
+**Evidencia 12-65 — Respuesta normal.** Dos ramas y body JSON con clasificación `PEDIDO_NORMAL`.
+
+![Evidencia 12-65 — Content Modifier normal](images/tema-12/12-65-content-modifier-respuesta-normal.png)
+
+#### 5. Desplegar
+
+Guardar y desplegar el iFlow. En Manage Integration Content se observó versión `1.0.1`, estado `Started` y endpoint publicado.
+
+**Evidencia 12-66 — Despliegue.** iFlow iniciado en el runtime.
+
+![Evidencia 12-66 — Started](images/tema-12/12-66-iflow-alternativas-nativas-started.png)
+
+#### 6. Validar ambas rutas con Postman
+
+Ejecutar peticiones POST autenticadas con `Content-Type: application/json`.
+
+**Pedido prioritario:**
+
+```json
+{"idPedido":1005,"totalPedido":67500}
+```
+
+**Resultado observado:** HTTP 200, `clasificacion = PEDIDO_PRIORITARIO`, `laboratorio = 12.5`, **4/4 tests aprobados**.
+
+**Evidencia 12-67 — Respuesta prioritaria.** Clasificación correcta para total 67500.
+
+![Evidencia 12-67 — Pedido prioritario](images/tema-12/12-67-postman-alternativas-nativas-prioritario.png)
+
+**Evidencia 12-68 — Tests prioritarios.** Cuatro aserciones Postman aprobadas.
+
+![Evidencia 12-68 — Tests prioritarios](images/tema-12/12-68-postman-alternativas-nativas-tests-prioritario.png)
+
+**Pedido normal:**
+
+```json
+{"idPedido":1006,"totalPedido":35000}
+```
+
+**Resultado observado:** HTTP 200, `clasificacion = PEDIDO_NORMAL`, `laboratorio = 12.5`, **4/4 tests aprobados**.
+
+**Evidencia 12-69 — Respuesta normal.** Clasificación correcta de pedido normal.
+
+![Evidencia 12-69 — Pedido normal](images/tema-12/12-69-postman-alternativas-nativas-normal.png)
+
+**Evidencia 12-70 — Tests normales.** Cuatro aserciones Postman aprobadas.
+
+![Evidencia 12-70 — Tests normales](images/tema-12/12-70-postman-alternativas-nativas-tests-normal.png)
+
+### Resultado esperado y validación
+
+Ambas rutas devolvieron la clasificación prevista y superaron las aserciones de Postman. **Estado: ✅ Completado.**
+
+### Problemas encontrados y aprendizajes
+
+El Router requiere una estructura XML y una condición XPath coherentes. La prueba funcional de cada rama es necesaria: que el iFlow esté `Started` y devuelva HTTP 200 no basta para demostrar que se eligió la ruta esperada. La solución nativa simplifica una clasificación basada en un campo ya calculado, pero no reproduce el cálculo de descuentos del 12.4.
+
+---
+
+## Validación acumulada del capítulo 12 — Actualización
+
+| Laboratorio | Evidencia práctica | Estado |
+|---|---|---|
+| 12.1 | Started, longitud 33, HTTP 200, 4/4 tests | ✅ Completado |
+| 12.2 | Started, headers/properties/body, HTTP 200, 4/4 tests | ✅ Completado |
+| 12.3 XML | Started, total 67500, HTTP 200, 4/4 tests | ✅ Completado |
+| 12.3 JSON | Started, total numérico 67500, HTTP 200, tests aprobados | ✅ Completado |
+| 12.4 | Started 1.0.1; 0 %, 5 %, 10 % y rechazo; 10/10 tests en cuatro peticiones | ✅ Completado |
+| 12.5 | Started 1.0.1; dos rutas, HTTP 200, 8/8 tests en dos peticiones | ✅ Completado |
+| 12.6 | Buenas prácticas y validación final | ⬜ Pendiente |
+
+**Estado del capítulo 12:** 🟨 En curso.
+
+### Referencias
 
 - [SAP Help Portal — Cloud Integration](https://help.sap.com/docs/integration-suite/sap-integration-suite/cloud-integration)
-- [Apache Camel — Simple Language](https://camel.apache.org/components/latest/languages/simple-language.html)
+- [Apache Camel — XPath Language](https://camel.apache.org/components/latest/languages/xpath-language.html)
