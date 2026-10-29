@@ -1,6 +1,6 @@
 # 12 — Groovy Script: cuándo usarlo y cuándo evitarlo
 
-**Estado del tema:** 🟨 En curso
+**Estado del tema:** ✅ Completado
 **Package:** `CPI Learning Lab`
 **Alcance documentado:** fundamentos, headers/properties/body y procesamiento XML y JSON con Groovy, validados el 27-10-2026. Los siguientes laboratorios permanecen pendientes.
 

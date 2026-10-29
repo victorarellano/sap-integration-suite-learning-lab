@@ -35,7 +35,7 @@ El criterio de avance no es solamente leer un tema: un tema se considera complet
 | 10 | Splitter, Gather y procesamiento de colecciones | ✅ `Completado` | General Splitter, Procesamiento individual,  Gather, Casos especiales|
 | 11 | Formatos JSON, XML y conversores | ✅ `Completado` | Estructura JSON y XML, JSON to XML Converter,  XML to JSON Converter, Estructuras complejas, Validaciones y casos especiales|
 | 12 | [Groovy Script: cuándo usarlo y cuándo evitarlo](docs/12-groovy-script-cuando-usarlo-y-cuando-evitarlo.md) | ✅ `Completado` | 12.1 Fundamentos; 12.2 Headers, Properties y Body; 12.3 XML/JSON; 12.4 Reglas de negocio (0 %, 5 %, 10 % y rechazo); 12.5 Alternativas nativas (dos rutas, 8/8 tests); 12.6 Groovy + Router XPath (descuentos, clasificación y HTTP 400, 16/16 tests). |
-| 13 | Manejo de errores y Exception Subprocess | ⬜ `Pendiente` | — |
+| 13 | Manejo de errores y Exception Subprocess | 🟨 `En curso` || 13 | Manejo de errores y Exception Subprocess | 🟨 `En curso` | 13.1 Fundamentos; 13.2 Exception Subprocess; 13.3 Información de excepciones; 13.4 Errores funcionales y técnicos; 13.5 Message End vs Error End; 13.6 Manejo centralizado y buenas prácticas. |
 | 14 | Monitorización, MPL y trazabilidad | ⬜ `Pendiente` | — |
 | 15 | Seguridad: OAuth, Basic, certificados y Security Material | ⬜ `Pendiente` | — |
 | 16 | Externalized Parameters y configuración por ambiente | ⬜ `Pendiente` | — |
