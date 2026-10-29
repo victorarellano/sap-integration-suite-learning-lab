@@ -1,6 +1,6 @@
 # 13 - Manejo de errores y Exception Subprocess
 
-**Estado del tema:** 🟨 En curso
+**Estado del tema:** ✅ Completado
 **Package:** `CPI Learning Lab`
 **iFlow reutilizado:** `LAB13_01_Error_No_Controlado`
 **Endpoint relativo:** `/http/lab13/error-no-controlado`
@@ -35,8 +35,8 @@ Distinguir los errores no controlados de los errores tratados por un Exception S
 | 13.2 | Exception Subprocess básico | ✅ Completado | HTTP 500 personalizado; MPL `Completed`; pruebas Postman |
 | 13.3 | Información de la excepción | ✅ Completado | Detalle real de la excepción en respuesta; 4/4 tests |
 | 13.4 | Errores funcionales y técnicos | ✅ Completado | HTTP 400 (7/7), 500 (4/4) y 200 (4/4) |
-| 13.5 | Message End vs Error End | ⬜ Pendiente | - |
-| 13.6 | Manejo centralizado y buenas prácticas | ⬜ Pendiente | - |
+| 13.5 | Message End vs Error End | ✅ Completado | HTTP 500; Message End/MPL Completed; Error End/MPL Failed |
+| 13.6 | Manejo centralizado y buenas prácticas | ✅ Completado | Versión 1.0.6 Started; HTTP 200/400/500; MPL Completed |
 
 ---
 
@@ -460,15 +460,136 @@ Diferenciar tres resultados: éxito HTTP 200, rechazo funcional HTTP 400 y fallo
 
 ## 13.5 - Message End vs Error End
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Completado
+**iFlow:** `LAB13_01_Error_No_Controlado`
+**Versión:** `1.0.5`
+**Postman:** `13.5 - Message End - Error técnico` y `13.5 - Error End - Error técnico`.
 
-**Objetivo previsto:** contrastar los eventos de finalización y sus efectos sobre la respuesta y el monitoreo. **Sin laboratorio implementado ni validado todavía.**
+### Objetivo
+
+Comparar dos eventos de finalización del Exception Subprocess, manteniendo la misma excepción, el mismo Content Modifier y el mismo endpoint. Distinguir el código HTTP del estado de procesamiento MPL.
+
+### Laboratorio paso a paso
+
+1. **Versionar.** Conservar la configuración anterior y crear la versión `1.0.5` con comentario `Message End vs Error End`. **Motivo:** preservar las pruebas validadas del laboratorio 13.4.
+2. **Probar Message End.** Mantener `Error Start 1 → CM_Respuesta_Error → Message End`. Enviar un POST autenticado a `/http/lab13/error-no-controlado` con `{"escenario":"tecnico","monto":100}`. El resultado fue HTTP `500` con el JSON personalizado del contrato `13.4`. La aserción Postman debe comprobar `laboratorio = "13.4"`, ya que el contrato no fue modificado.
+
+   **Evidencia 13-32 - HTTP 500 con Message End.** Respuesta técnica JSON controlada.
+
+   ![Evidencia 13-32 - HTTP 500 con Message End](images/tema-13/13-32-postman-message-end-http500.png)
+
+3. **Consultar el MPL.** La ejecución terminó en `Completed` pese al HTTP 500. **Motivo:** el Exception Subprocess gestionó la excepción y finalizó con Message End.
+
+   **Evidencia 13-33 - MPL Completed con Message End.** Estado de la ejecución técnica.
+
+   ![Evidencia 13-33 - MPL Completed](images/tema-13/13-33-monitor-message-end-completed.png)
+
+4. **Cambiar solo el evento final.** Sustituir Message End por Error End, dejando `Error Start 1 → CM_Respuesta_Error → Error End 1`; conservar Groovy, body y headers. **Motivo:** aislar el efecto del evento final.
+
+   **Evidencia 13-34 - Exception Subprocess con Error End.** Configuración previa al despliegue.
+
+   ![Evidencia 13-34 - Error End](images/tema-13/13-34-exception-subprocess-error-end.png)
+
+5. **Desplegar y ejecutar la misma petición técnica.** El artefacto quedó `Started`. Postman devolvió HTTP `500` con un mensaje genérico y el identificador MPL, no el JSON personalizado. Se observaron 2/4 tests aprobados; las aserciones que esperaban JSON dejaron de corresponder a la respuesta recibida.
+
+   **Evidencia 13-35 - Respuesta HTTP 500 con Error End.** Mensaje genérico con referencia al MPL.
+
+   ![Evidencia 13-35 - HTTP 500 con Error End](images/tema-13/13-35-postman-error-end-http500.png)
+
+6. **Consultar el MPL.** La ejecución terminó en `Failed` y Error Details mostró la excepción `IllegalStateException` del script `GRV_ProvocarError_v2.groovy`.
+
+   **Evidencia 13-36 - MPL Failed con Error End.** Comparación con las ejecuciones anteriores `Completed`.
+
+   ![Evidencia 13-36 - MPL Failed](images/tema-13/13-36-monitor-error-end-failed.png)
+
+### Resultado esperado y validación
+
+| Observación | Message End | Error End |
+|---|---|---|
+| HTTP | 500 | 500 |
+| Respuesta | JSON técnico personalizado | Mensaje genérico con MPL ID |
+| MPL | `Completed` | `Failed` |
+| Diagnóstico | Monitor | Monitor / Error Details |
+
+**Aprendizaje:** HTTP 500 y MPL Failed no son equivalentes. En el diseño validado, el evento final determina el estado MPL y afecta a la respuesta del consumidor.
+
+---
 
 ## 13.6 - Manejo centralizado y buenas prácticas
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Completado
+**iFlow:** `LAB13_01_Error_No_Controlado`
+**Versión final:** `1.0.6`
+**Postman:** `13.6 - Solicitud válida - HTTP 200`, `13.6 - Error funcional - HTTP 400`, `13.6 - Error técnico - HTTP 500`.
 
-**Objetivo previsto:** consolidar patrones de tratamiento de errores, respuesta al consumidor y observabilidad. **Sin laboratorio implementado ni validado todavía.**
+### Objetivo
+
+Centralizar el tratamiento de excepciones técnicas en el Exception Subprocess, devolver un contrato JSON sin detalles internos y conservar la separación entre validaciones de negocio y errores técnicos.
+
+### Laboratorio paso a paso
+
+1. **Versionar.** Crear `1.0.6` con comentario `Manejo centralizado de errores y buenas practicas`. **Motivo:** preservar la versión `1.0.5` con Error End.
+2. **Restablecer Message End.** Configurar `Error Start 1 → CM_Respuesta_Error → Message End`, sin alterar el flujo principal ni el Groovy. **Motivo:** devolver una respuesta técnica controlada.
+
+   **Evidencia 13-37 - Exception Subprocess centralizado.** Content Modifier y Message End.
+
+   ![Evidencia 13-37 - Manejo centralizado](images/tema-13/13-37-exception-subprocess-manejo-centralizado.png)
+
+3. **Verificar la respuesta técnica.** `CM_Respuesta_Error` conserva Message Body `Constant`:
+
+   ```json
+   {
+     "laboratorio": "13.4",
+     "tipoError": "TECNICO",
+     "codigo": "ERROR_INTERNO",
+     "mensaje": "Ocurrio un error durante el procesamiento"
+   }
+   ```
+
+   Headers: `CamelHttpResponseCode = 500` y `Content-Type = application/json`, ambos `Constant`. **Motivo:** mantener un contrato técnico estable sin exponer clases, scripts ni líneas internas. El valor `laboratorio = "13.4"` identifica el contrato reutilizado, no la petición Postman.
+4. **Desplegar.** Comprobar versión `1.0.6` y estado `Started` en Manage Integration Content.
+
+   **Evidencia 13-38 - Despliegue final.** Versión 1.0.6 iniciada.
+
+   ![Evidencia 13-38 - iFlow Started](images/tema-13/13-38-iflow-manejo-centralizado-started.png)
+
+5. **Probar solicitud válida.** POST `{"escenario":"correcto","monto":100}`. Resultado HTTP `200`, `estado = "OK"`, `monto = 100`, **1/1 test Postman**. **Motivo:** verificar que el tratamiento de errores no interfiere con el flujo normal.
+
+   **Evidencia 13-39 - HTTP 200.** Respuesta de solicitud válida.
+
+   ![Evidencia 13-39 - HTTP 200](images/tema-13/13-39-postman-manejo-centralizado-http200.png)
+
+6. **Probar error funcional.** POST `{"escenario":"funcional","monto":-100}`. Resultado HTTP `400`, `tipoError = "FUNCIONAL"`, `codigo = "MONTO_INVALIDO"`, **1/1 test Postman**. **Motivo:** rechazar una entrada inválida sin generar una excepción técnica.
+
+   **Evidencia 13-40 - HTTP 400.** Error de validación de negocio.
+
+   ![Evidencia 13-40 - HTTP 400](images/tema-13/13-40-postman-manejo-centralizado-http400.png)
+
+7. **Probar error técnico.** POST `{"escenario":"tecnico","monto":100}`. Resultado HTTP `500`, `tipoError = "TECNICO"`, `codigo = "ERROR_INTERNO"`, **1/1 test Postman**. El body no expone información interna. **Motivo:** verificar el contrato del Exception Subprocess.
+
+   **Evidencia 13-41 - HTTP 500.** Respuesta técnica controlada.
+
+   ![Evidencia 13-41 - HTTP 500](images/tema-13/13-41-postman-manejo-centralizado-http500.png)
+
+8. **Consultar el MPL.** La ejecución técnica más reciente quedó `Completed` (13 ms), aunque Postman recibió HTTP 500. **Motivo:** validar por separado respuesta HTTP y estado de procesamiento.
+
+   **Evidencia 13-42 - MPL Completed.** Ejecución de error técnico gestionado con Message End.
+
+   ![Evidencia 13-42 - MPL Completed](images/tema-13/13-42-monitor-manejo-centralizado-completed.png)
+
+### Resultado esperado y validación
+
+| Escenario | HTTP | Resultado | Tests |
+|---|---|---|---|
+| Solicitud válida | 200 | `estado = OK`, `monto = 100` | 1/1 |
+| Error funcional | 400 | `tipoError = FUNCIONAL`, `codigo = MONTO_INVALIDO` | 1/1 |
+| Error técnico | 500 | `tipoError = TECNICO`, `codigo = ERROR_INTERNO` | 1/1 |
+
+**Resultado final:** versión `1.0.6` desplegada en `Started`; tres respuestas validadas y MPL `Completed` en el escenario técnico.
+
+**Aprendizajes:** el manejo de excepciones técnicas puede centralizarse sin convertir errores funcionales en fallos de ejecución. Para integraciones productivas, elegir Message End o Error End requiere considerar monitorización, alertas y reintentos; aquí se documenta el comportamiento observado en el laboratorio.
+
+---
 
 ## Aprendizajes consolidados
 
@@ -477,11 +598,11 @@ Diferenciar tres resultados: éxito HTTP 200, rechazo funcional HTTP 400 y fallo
 3. La información real de la excepción puede recuperarse en un Exception Subprocess, pero no debe exponerse indiscriminadamente en producción.
 4. Los errores de validación de negocio y las excepciones técnicas requieren rutas de respuesta diferentes.
 5. Un despliegue `Started` debe complementarse con pruebas de procesamiento reales.
+6. Message End y Error End produjeron estados MPL diferentes y respuestas distintas al consumidor.
+7. La versión 1.0.6 distingue los contratos HTTP 200, 400 y 500.
 
 ## Referencias
 
 - [SAP Integration Suite - SAP Help Portal](https://help.sap.com/docs/integration-suite)
 - [Metodología de laboratorios](METODOLOGIA-LABORATORIOS.md)
 - [KBA y hallazgos](kba-y-hallazgos.md)
-
-**Nota de evidencias:** las rutas relativas `images/tema-13/` siguen la convención del repositorio. Las imágenes se deben incorporar a esa carpeta con los nombres indicados antes de publicar este Markdown. Los nombres de las evidencias 13-19 a 13-25 deben contrastarse con los archivos efectivamente guardados, pues no se ha verificado su existencia en GitHub.
