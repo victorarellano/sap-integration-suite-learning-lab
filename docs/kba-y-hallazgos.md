@@ -437,3 +437,58 @@ Consultar `10-16-gather-router-incompatible.png`, `10-17-gather-arquitectura-cor
 **Aprendizaje:** para consumir headers HTTP personalizados en el procesamiento del iFlow, revisar la lista de headers permitidos y comprobar su recepción con una aserción funcional.
 
 **Evidencia:** `docs/images/tema-12/12-21-postman-headers-properties-body-validado.png` y `docs/images/tema-12/12-22-postman-tests-headers-properties-body.png`.
+
+## KBA-LAB-012 — Error de sintaxis Groovy no advertido en el editor antes del despliegue
+
+**Origen:** Capítulo 13, laboratorio 13.4 — Errores funcionales y técnicos.
+**Artefacto:** `LAB13_01_Error_No_Controlado`.
+**Recurso:** `GRV_ProvocarError_v2.groovy`.
+**Estado:** Resuelto y validado mediante Postman (29-10-2026).
+
+### Síntoma
+
+El editor del iFlow no mostró una advertencia visible sobre una instrucción Groovy incompleta. El iFlow pudo desplegarse y alcanzó `Started`. Al ejecutar una solicitud funcional desde Postman, se activó el Exception Subprocess y se devolvió HTTP 500 en lugar del HTTP 400 esperado.
+
+### Código observado
+
+**Antes — instrucción incorrecta:**
+
+```groovy
+def body = new JsonSlurper().parse(message.getBody(java.io.Reader)
+```
+
+**Después — instrucción corregida:**
+
+```groovy
+def body = new JsonSlurper().parse(message.getBody(java.io.Reader))
+```
+
+La instrucción original carecía de un paréntesis de cierre. El compilador señaló la línea siguiente, al encontrar `if` donde esperaba completar la expresión anterior.
+
+### Diagnóstico
+
+En **Monitor Message Processing**, el detalle de ejecución del paso Groovy mostró:
+
+```text
+MultipleCompilationErrorsException: startup failed
+GRV_ProvocarError_v2__Script.groovy: 9:
+unexpected token: if @ line 9, column 5.
+```
+
+El fallo se produjo al compilar el script para procesar la solicitud. El Exception Subprocess capturó el error y construyó la respuesta técnica genérica HTTP 500, conforme a su configuración.
+
+### Corrección y validación
+
+Se cerró correctamente la llamada `parse(...)` y se ejecutaron nuevamente las peticiones de Postman. Los resultados observados fueron:
+
+| Escenario | HTTP | Tests Postman |
+|---|---|---|
+| Solicitud válida | 200 | 4/4 |
+| Error funcional | 400 | 7/7 |
+| Error técnico | 500 | 4/4 |
+
+### Aprendizaje y alcance
+
+En esta ejecución, el editor no señaló un error sintáctico que luego fue identificado durante la compilación del script en tiempo de procesamiento. **El estado `Started` no garantiza que todos los scripts Groovy puedan ejecutarse sin errores de compilación.** Ante un HTTP inesperado, consultar el MPL y revisar también la instrucción anterior a la línea indicada por el compilador.
+
+El hallazgo describe exclusivamente el comportamiento observado en este laboratorio; no demuestra que el editor de SAP Cloud Integration omita sistemáticamente estas validaciones.

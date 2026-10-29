@@ -2,379 +2,486 @@
 
 **Estado del tema:** 🟨 En curso
 **Package:** `CPI Learning Lab`
-**Alcance documentado:** laboratorios 13.1 y 13.2 validados el 29-10-2026.
+**iFlow reutilizado:** `LAB13_01_Error_No_Controlado`
+**Endpoint relativo:** `/http/lab13/error-no-controlado`
+**Postman:** `CPI Learning Lab / Lab 13 - Manejo de Errores y Exception Subprocess`
 
 ## Objetivo
 
-Comprender cómo se comporta SAP Cloud Integration ante una excepción no gestionada, capturarla mediante Exception Subprocess y distinguir la respuesta HTTP al consumidor del estado de procesamiento registrado en el Message Processing Log (MPL).
-
-## Prerrequisitos
-
-- Acceso a SAP Integration Suite / Cloud Integration y permisos de diseño, despliegue y monitorización.
-- Package `CPI Learning Lab`.
-- Postman configurado con OAuth 2.0 para invocar los endpoints protegidos, sin guardar secretos en el repositorio.
-- Conocimientos de HTTPS Sender, Groovy Script, Content Modifier, headers y Exchange Properties.
+Distinguir los errores no controlados de los errores tratados por un Exception Subprocess; obtener información diagnóstica y diferenciar respuestas funcionales, técnicas y exitosas mediante pruebas reales.
 
 ## Conceptos
 
-- **Excepción no gestionada:** fallo que interrumpe el procesamiento normal sin una ruta de tratamiento configurada.
-- **Exception Subprocess:** subproceso que se activa ante una excepción del proceso de integración y permite ejecutar pasos de tratamiento.
-- **End Message:** evento que finaliza la ruta del subproceso; su efecto sobre el estado MPL debe contrastarse con la ejecución real.
-- **`CamelHttpResponseCode`:** header utilizado aquí para fijar el código de respuesta HTTP.
-- **MPL:** registro de procesamiento consultable en Monitor Message Processing; su estado no equivale necesariamente al código HTTP devuelto al cliente.
+- **Excepción no controlada:** interrumpe el procesamiento sin una respuesta de error personalizada.
+- **Exception Subprocess:** ruta de manejo que se activa ante una excepción del proceso de integración.
+- **Message End:** finaliza la ruta de procesamiento; en los ejercicios observados, un error tratado de esta manera produjo un MPL `Completed` aun cuando el cliente recibió HTTP 500.
+- **`CamelHttpResponseCode`:** header que permite definir el estado HTTP de la respuesta en la ruta donde se establece.
+- **Exchange Property:** almacena información de contexto del mensaje, como el detalle de una excepción.
+- **Error funcional:** entrada rechazada por una regla de negocio; puede devolverse directamente sin lanzar una excepción técnica.
+- **Error técnico:** fallo de ejecución que se trata mediante el Exception Subprocess, con respuesta genérica para el consumidor.
 
-## Índice de microaprendizajes
+## Prerrequisitos
 
-| ID | Microaprendizaje | Estado | Validación |
+- SAP Cloud Integration operativo y permisos para diseñar, versionar, desplegar y monitorizar iFlows.
+- Postman con autenticación OAuth 2.0 Client Credentials y acceso al endpoint del runtime.
+- Conocimientos de HTTPS Sender, Groovy Script, Content Modifier, headers y Exchange Properties.
+- Antes de cada cambio de laboratorio sobre el mismo iFlow, conservar la versión y las evidencias del ejercicio anterior.
+
+## Estado de los microaprendizajes
+
+| ID | Laboratorio | Estado | Validación |
 |---|---|---|---|
-| 13.1 | Fundamentos: error no controlado | ✅ Completado | Excepción Groovy, HTTP 500, Postman 1/1, MPL `Failed` |
-| 13.2 | Exception Subprocess básico | ✅ Completado | JSON personalizado, HTTP 500, pruebas Postman aprobadas, MPL `Completed` |
-| 13.3 | Información de la excepción | ⬜ Pendiente | - |
-| 13.4 | Errores funcionales y técnicos | ⬜ Pendiente | - |
-| 13.5 | Propagación y finalización: Message End y Error End | ⬜ Pendiente | - |
+| 13.1 | Error no controlado | ✅ Completado | HTTP 500; MPL `Failed`; excepción identificada |
+| 13.2 | Exception Subprocess básico | ✅ Completado | HTTP 500 personalizado; MPL `Completed`; pruebas Postman |
+| 13.3 | Información de la excepción | ✅ Completado | Detalle real de la excepción en respuesta; 4/4 tests |
+| 13.4 | Errores funcionales y técnicos | ✅ Completado | HTTP 400 (7/7), 500 (4/4) y 200 (4/4) |
+| 13.5 | Message End vs Error End | ⬜ Pendiente | - |
 | 13.6 | Manejo centralizado y buenas prácticas | ⬜ Pendiente | - |
-
-## Organización de Postman
-
-**Carpeta:** `Lab 13 - Manejo de Errores y Exception Subprocess` dentro de la colección `CPI Learning Lab`.
-
-Se acordaron seis requests iniciales, uno por microaprendizaje; se pueden incorporar requests adicionales cuando un escenario lo requiera. En este documento se describen los dos requests ejecutados:
-
-- `13.1 - Error no controlado`
-- `13.2 - Exception Subprocess básico`
-
-Los requests comparten el endpoint de laboratorio, pero se ejecutaron contra dos configuraciones desplegadas sucesivamente del mismo iFlow. La autenticación se realiza mediante OAuth 2.0.
 
 ---
 
 ## 13.1 - Error no controlado
 
 **Estado:** ✅ Completado
-**iFlow:** `LAB13_01_Error_No_Controlado`
 **Versión desplegada:** `1.0.1`
-**Endpoint relativo:** `/http/lab13/error-no-controlado`
 **Postman:** `13.1 - Error no controlado`
 
 ### Objetivo
 
-Generar una excepción deliberada sin Exception Subprocess, observar la respuesta HTTP y relacionarla con el fallo registrado en MPL.
+Provocar una excepción sin tratamiento explícito y observar su impacto en la respuesta HTTP y el monitoreo.
 
 ### Laboratorio paso a paso
 
-#### 1. Crear el iFlow
+1. Crear el iFlow `LAB13_01_Error_No_Controlado` en el package `CPI Learning Lab`, con Sender HTTPS → Start → Groovy Script → End. Se conserva un diseño mínimo para aislar el comportamiento de la excepción.
 
-En el package `CPI Learning Lab`, crear `LAB13_01_Error_No_Controlado` con la secuencia inicial `Start → End`.
+   **Evidencia 13-01 - iFlow inicial.** Estructura creada para la prueba de error no controlado.
 
-**Motivo:** disponer de un artefacto independiente para observar un error reproducible sin alterar los laboratorios previos.
+   ![Evidencia 13-01 - iFlow inicial](images/tema-13/13-01-iflow-error-no-controlado-creado.png)
 
-**Evidencia 13-01 - iFlow creado**
-La estructura inicial muestra el artefacto aún sin desplegar.
+2. Configurar HTTPS Sender con `Address = /lab13/error-no-controlado`, `Authorization = User Role`, `User Role = ESBMessaging.send` y CSRF desactivado para la prueba autenticada.
 
-![Evidencia 13-01 - iFlow creado](images/tema-13/13-01-iflow-error-no-controlado-creado.png)
+   **Motivo:** recibir una solicitud POST desde Postman y ejecutar el script en el runtime.
 
-#### 2. Configurar HTTPS Sender
+   **Evidencia 13-02 - HTTPS Sender.** Dirección y autorización configuradas.
 
-Conectar `Sender` a `Start` mediante HTTPS:
+   ![Evidencia 13-02 - HTTPS Sender](images/tema-13/13-02-https-sender-configuracion.png)
 
-| Campo | Valor |
-|---|---|
-| Address | `/lab13/error-no-controlado` |
-| Authorization | `User Role` |
-| User Role | `ESBMessaging.send` |
-| CSRF Protected | Desactivado |
+3. Incorporar el paso `Provocar Error` y asociar el recurso `GRV_ProvocarError.groovy`.
 
-**Motivo:** exponer un endpoint autenticado que pueda invocarse desde Postman sin añadir dependencias externas.
+   **Evidencia 13-03 - Paso Groovy.** Script incorporado a la ruta principal.
 
-**Evidencia 13-02 - HTTPS Sender**
-Se observan la dirección, el rol de autorización y CSRF desactivado.
+   ![Evidencia 13-03 - Paso Groovy](images/tema-13/13-03-iflow-groovy-error-incorporado.png)
 
-![Evidencia 13-02 - HTTPS Sender](images/tema-13/13-02-https-sender-configuracion.png)
+   Implementar:
 
-#### 3. Incorporar Groovy Script
+   ```groovy
+   import com.sap.gateway.ip.core.customdev.util.Message
 
-Insertar el paso `Provocar Error` entre `Start` y `End`, asociar el recurso `GRV_ProvocarError.groovy` y utilizar la función `processData`.
+   def Message processData(Message message) {
+       message.setProperty("Laboratorio", "13.1")
+       throw new IllegalStateException(
+           "LAB13_01: Error provocado intencionalmente"
+       )
+   }
+   ```
 
-**Evidencia 13-03 - Paso Groovy incorporado**
-La secuencia queda `Start → Provocar Error → End`.
+   **Motivo:** `throw` interrumpe el flujo normal; la propiedad identifica el laboratorio sin alterar el tipo de excepción.
 
-![Evidencia 13-03 - Paso Groovy](images/tema-13/13-03-iflow-groovy-error-incorporado.png)
+   **Evidencia 13-04 - Excepción intencional.** Código final del recurso Groovy.
 
-Configurar el script definitivo:
+   ![Evidencia 13-04 - Groovy](images/tema-13/13-04-groovy-excepcion-intencional.png)
 
-```groovy
-import com.sap.gateway.ip.core.customdev.util.Message
+4. Guardar y desplegar la versión `1.0.1`; comprobar `Started`.
 
-def Message processData(Message message) {
-    message.setProperty("Laboratorio", "13.1")
+   **Evidencia 13-05 - Despliegue.** Versión iniciada en Manage Integration Content.
 
-    throw new IllegalStateException(
-        "LAB13_01: Error provocado intencionalmente"
-    )
-}
-```
+   ![Evidencia 13-05 - Started](images/tema-13/13-05-iflow-error-no-controlado-started.png)
 
-**Motivo:** `setProperty` identifica el escenario y `throw` interrumpe el procesamiento mediante una excepción identificable, sin depender de un receptor externo. No se incorpora tratamiento de excepciones en esta versión.
+5. Enviar un POST autenticado desde Postman con body JSON:
 
-**Evidencia 13-04 - Código Groovy definitivo**
-El editor muestra la excepción deliberada y ninguna advertencia en General Script Checks.
+   ```json
+   {"laboratorio":"13.1","mensaje":"Prueba de error no controlado"}
+   ```
 
-![Evidencia 13-04 - Código Groovy](images/tema-13/13-04-groovy-excepcion-intencional.png)
+   **Resultado observado:** HTTP `500`, respuesta genérica con identificador MPL y ejecución marcada `Failed`. El detalle del monitor identificó `java.lang.IllegalStateException: LAB13_01: Error provocado intencionalmente`.
 
-#### 4. Desplegar y comprobar el runtime
+   **Evidencia 13-06 - HTTP 500 no controlado.** Respuesta recibida por Postman.
 
-Guardar y desplegar el iFlow. En **Monitor → Manage Integration Content** se comprobó la versión `1.0.1`, el estado `Started` y el endpoint publicado.
+   ![Evidencia 13-06 - HTTP 500](images/tema-13/13-06-postman-error-no-controlado.png)
 
-**Evidencia 13-05 - Despliegue Started**
-Confirma el despliegue correcto; no implica que los mensajes se procesen sin errores.
+   **Evidencia 13-07 - Pruebas Postman.** Aserción del estado HTTP esperado.
 
-![Evidencia 13-05 - Despliegue](images/tema-13/13-05-iflow-error-no-controlado-started.png)
+   ![Evidencia 13-07 - Tests](images/tema-13/13-07-postman-error-no-controlado-tests.png)
 
-#### 5. Ejecutar el request 13.1 en Postman
+   **Evidencia 13-08 - MPL Failed.** Registro de la excepción original en Monitor Message Processing.
 
-Configurar `POST`, OAuth 2.0, `Content-Type: application/json` y el endpoint del iFlow. Enviar:
+   ![Evidencia 13-08 - MPL](images/tema-13/13-08-monitor-mpl-error-no-controlado.png)
 
-```json
-{
-  "laboratorio": "13.1",
-  "mensaje": "Prueba de error no controlado"
-}
-```
+### Resultado, validación y aprendizajes
 
-**Resultado observado:** `500 Internal Server Error`. El body contiene un mensaje genérico de error interno y un identificador MPL, no el texto personalizado de la excepción. Tiempo de respuesta observado: 173 ms.
-
-**Evidencia 13-06 - Error HTTP sin tratamiento**
-La respuesta de Postman muestra HTTP 500 y el identificador MPL.
-
-![Evidencia 13-06 - HTTP 500](images/tema-13/13-06-postman-error-no-controlado.png)
-
-La aserción de Postman fue:
-
-```javascript
-pm.test("Status code is 500", function () {
-    pm.response.to.have.status(500);
-});
-```
-
-**Resultado:** `1/1 PASSED`.
-
-**Evidencia 13-07 - Test HTTP 500**
-La prueba automática verifica el código de respuesta.
-
-![Evidencia 13-07 - Test HTTP 500](images/tema-13/13-07-postman-error-no-controlado-tests.png)
-
-#### 6. Diagnosticar la ejecución en MPL
-
-En **Monitor → Monitor Message Processing**, abrir la ejecución fallida del iFlow.
-
-**Resultado observado:** estado `Failed`; excepción `java.lang.IllegalStateException`; texto `LAB13_01: Error provocado intencionalmente`; referencia a `GRV_ProvocarError.groovy`, línea 7. En la ejecución capturada se observó un tiempo de procesamiento de 12 ms.
-
-**Evidencia 13-08 - Excepción registrada en MPL**
-El monitor identifica el error generado en el script y confirma el estado fallido.
-
-![Evidencia 13-08 - MPL Failed](images/tema-13/13-08-monitor-mpl-error-no-controlado.png)
-
-### Validación y aprendizajes
-
-**Resultado esperado y confirmado:** el iFlow puede desplegarse correctamente y, aun así, fallar al procesar mensajes. La respuesta HTTP 500 por sí sola no identifica la causa; el MPL permite asociarla con la excepción y su ubicación en el script.
+La excepción no controlada generó HTTP 500 y un MPL `Failed`. El monitor permitió localizar el fallo y su mensaje original. Un código HTTP 500 por sí solo no identifica la causa: es necesario revisar el MPL.
 
 ---
 
 ## 13.2 - Exception Subprocess básico
 
 **Estado:** ✅ Completado
-**iFlow reutilizado:** `LAB13_01_Error_No_Controlado`
 **Versión desplegada:** `1.0.2`
-**Endpoint relativo:** `/http/lab13/error-no-controlado`
 **Postman:** `13.2 - Exception Subprocess básico`
 
 ### Objetivo
 
-Capturar la excepción del laboratorio anterior y devolver un JSON personalizado, comparando el código HTTP con el estado de procesamiento en MPL.
-
-### Control de versiones
-
-Antes de modificar el iFlow utilizado en 13.1, preservar la configuración anterior mediante el versionado del artefacto. La versión desplegada en 13.1 fue `1.0.1` y la versión desplegada tras incorporar el Exception Subprocess fue `1.0.2`. No se cambia el endpoint ni el recurso Groovy que provoca el error.
-
-**Motivo:** mantener una referencia reproducible del comportamiento sin tratamiento y diferenciar los resultados de ambos laboratorios.
+Capturar una excepción mediante un Exception Subprocess y devolver una respuesta JSON controlada.
 
 ### Laboratorio paso a paso
 
-#### 1. Incorporar Exception Subprocess
+1. Conservar las evidencias del laboratorio 13.1 y crear una nueva versión del mismo iFlow antes de modificarlo. Agregar un Exception Subprocess con `Error Start 1 → CM_Respuesta_Error → End 1` (Message End).
 
-Dentro del Integration Process agregar `Exception Subprocess 1`, inicialmente con `Error Start 1 → End 1`. Mantener intacta la secuencia principal `Start → Provocar Error → End`.
+   **Motivo:** mantener el error provocado por Groovy, pero cambiar su tratamiento mediante una ruta separada.
 
-**Evidencia 13-09 - Exception Subprocess incorporado**
-Se observan el proceso principal y el subproceso de excepción.
+   **Evidencia 13-09 - Exception Subprocess.** Estructura de captura incorporada.
 
-![Evidencia 13-09 - Exception Subprocess](images/tema-13/13-09-iflow-exception-subprocess-incorporado.png)
+   ![Evidencia 13-09 - Exception Subprocess](images/tema-13/13-09-iflow-exception-subprocess-incorporado.png)
 
-#### 2. Agregar Content Modifier
+2. Configurar `CM_Respuesta_Error` para construir una respuesta fija:
 
-Insertar `CM_Respuesta_Error` entre `Error Start 1` y `End 1`.
+   **Message Body**, `Type = Constant`:
 
-**Motivo:** utilizar un componente nativo para construir la respuesta, sin introducir otro script Groovy.
+   ```json
+   {
+     "laboratorio": "13.2",
+     "estado": "ERROR_CONTROLADO",
+     "mensaje": "La excepcion fue capturada por Exception Subprocess"
+   }
+   ```
 
-**Evidencia 13-10 - Content Modifier en el subproceso**
-La ruta queda `Error Start 1 → CM_Respuesta_Error → End 1`.
+   **Message Header**, `Source Type = Constant`:
 
-![Evidencia 13-10 - Content Modifier](images/tema-13/13-10-exception-subprocess-content-modifier.png)
+   | Name | Source Value |
+   |---|---|
+   | `CamelHttpResponseCode` | `500` |
+   | `Content-Type` | `application/json` |
 
-#### 3. Configurar Message Body
+   **Motivo:** definir explícitamente la respuesta técnica del subproceso, sin depender del texto de error devuelto automáticamente.
 
-En `CM_Respuesta_Error`, pestaña **Message Body**, establecer `Type = Constant`:
+   **Evidencia 13-10 - Content Modifier.** Componente de respuesta dentro del subproceso.
 
-```json
-{
-  "laboratorio": "13.2",
-  "estado": "ERROR_CONTROLADO",
-  "mensaje": "La excepcion fue capturada por Exception Subprocess"
-}
-```
+   ![Evidencia 13-10 - Content Modifier](images/tema-13/13-10-exception-subprocess-content-modifier.png)
 
-**Motivo:** comprobar inicialmente la ejecución del subproceso con un cuerpo fijo; la lectura dinámica de la excepción se reserva para 13.3.
+   **Evidencia 13-11 - Body JSON.** Contenido constante de la respuesta.
 
-**Evidencia 13-11 - Body JSON**
-El Content Modifier contiene el JSON de error controlado.
+   ![Evidencia 13-11 - Body JSON](images/tema-13/13-11-exception-subprocess-body-json.png)
 
-![Evidencia 13-11 - Body JSON](images/tema-13/13-11-exception-subprocess-body-json.png)
+   **Evidencia 13-12 - Headers HTTP.** Código 500 y tipo de contenido.
 
-#### 4. Configurar headers HTTP
+   ![Evidencia 13-12 - Headers](images/tema-13/13-12-exception-subprocess-headers-http.png)
 
-En **Message Header**, agregar:
+3. Terminar el subproceso con `End 1` (Message End), guardar y desplegar `1.0.2`.
 
-| Action | Name | Source Type | Source Value |
-|---|---|---|---|
-| Create | `CamelHttpResponseCode` | Constant | `500` |
-| Create | `Content-Type` | Constant | `application/json` |
+   **Evidencia 13-13 - Message End.** Evento de finalización utilizado.
 
-Si `Data Type` no permite edición, conservar su valor predeterminado.
+   ![Evidencia 13-13 - End](images/tema-13/13-13-exception-subprocess-end-event.png)
 
-**Motivo:** devolver HTTP 500 y anunciar explícitamente un cuerpo JSON, en vez de depender de la respuesta genérica del error no gestionado.
+   **Evidencia 13-14 - Despliegue.** Runtime `Started` para la versión `1.0.2`.
 
-**Evidencia 13-12 - Headers HTTP**
-Se verifican los dos headers configurados.
+   ![Evidencia 13-14 - Started](images/tema-13/13-14-iflow-exception-subprocess-started.png)
 
-![Evidencia 13-12 - Headers HTTP](images/tema-13/13-12-exception-subprocess-headers-http.png)
+4. Crear una petición Postman independiente, con el mismo endpoint y autenticación:
 
-#### 5. Verificar el evento final
+   ```json
+   {"laboratorio":"13.2","mensaje":"Prueba de Exception Subprocess"}
+   ```
 
-Conservar `End 1` como **End Message**.
+   **Resultado observado:** HTTP `500` y el JSON controlado definido en el Content Modifier. Las aserciones de estado, formato y contenido se ejecutaron correctamente. El MPL correspondiente figuró `Completed`.
 
-**Motivo:** comprobar experimentalmente si el tratamiento de la excepción termina el procesamiento con estado `Completed`, incluso al devolver HTTP 500.
+   **Evidencia 13-15 - Respuesta controlada.** JSON devuelto por el Exception Subprocess.
 
-**Evidencia 13-13 - End Message**
-Las propiedades del evento muestran el tipo `End Message`.
+   ![Evidencia 13-15 - Postman](images/tema-13/13-15-postman-exception-subprocess-respuesta.png)
 
-![Evidencia 13-13 - End Message](images/tema-13/13-13-exception-subprocess-end-event.png)
+   **Evidencia 13-16 - Pruebas Postman.** Validación de la respuesta controlada.
 
-#### 6. Guardar, desplegar y verificar
+   ![Evidencia 13-16 - Tests](images/tema-13/13-16-postman-exception-subprocess-tests.png)
 
-Guardar y desplegar la configuración actualizada. En **Manage Integration Content** se comprobó la versión `1.0.2`, el estado `Started` y el mismo endpoint.
+   **Evidencia 13-17 - MPL Completed.** El procesamiento quedó completado a pesar de responder HTTP 500.
 
-**Evidencia 13-14 - Despliegue de versión 1.0.2**
-Confirma que la configuración con Exception Subprocess está activa.
+   ![Evidencia 13-17 - MPL](images/tema-13/13-17-monitor-mpl-exception-subprocess.png)
 
-![Evidencia 13-14 - Started](images/tema-13/13-14-iflow-exception-subprocess-started.png)
+   **Evidencia 13-18 - Validación ampliada.** Pruebas posteriores de la respuesta JSON, sin necesidad de duplicar capturas.
 
-#### 7. Probar el request 13.2 en Postman
+   ![Evidencia 13-18 - Validación ampliada](images/tema-13/13-18-postman-exception-subprocess-tests-completos.png)
 
-Configurar un request independiente `POST` con OAuth 2.0, `Content-Type: application/json` y el mismo endpoint. Enviar:
+### Resultado, validación y aprendizajes
 
-```json
-{
-  "laboratorio": "13.2",
-  "mensaje": "Prueba de Exception Subprocess"
-}
-```
-
-**Resultado observado:** `500 Internal Server Error` y el JSON personalizado:
-
-```json
-{
-  "laboratorio": "13.2",
-  "estado": "ERROR_CONTROLADO",
-  "mensaje": "La excepcion fue capturada por Exception Subprocess"
-}
-```
-
-Tiempo de respuesta observado en la primera captura: 562 ms.
-
-**Evidencia 13-15 - Respuesta personalizada**
-Postman recibe HTTP 500 con el JSON definido por el Content Modifier.
-
-![Evidencia 13-15 - Respuesta personalizada](images/tema-13/13-15-postman-exception-subprocess-respuesta.png)
-
-**Evidencia 13-16 - Test inicial de Postman**
-La primera aserción automática verifica el código HTTP 500 (`1/1 PASSED`).
-
-![Evidencia 13-16 - Test inicial](images/tema-13/13-16-postman-exception-subprocess-tests.png)
-
-#### 8. Comprobar el estado del MPL
-
-Abrir la ejecución correspondiente a la prueba 13.2 en **Monitor → Monitor Message Processing**.
-
-**Resultado observado:** `Completed`, tiempo de procesamiento 48 ms, pese a que el consumidor recibió HTTP 500. Las ejecuciones anteriores sin Exception Subprocess permanecían registradas como `Failed`.
-
-**Evidencia 13-17 - MPL Completed**
-El monitor muestra el estado completado del mensaje tratado por el Exception Subprocess.
-
-![Evidencia 13-17 - MPL Completed](images/tema-13/13-17-monitor-mpl-exception-subprocess.png)
-
-#### 9. Reforzar las aserciones de Postman
-
-En **Scripts → After response**, verificar código HTTP, Content-Type y contenido del JSON. Versión limpia del script de validación:
-
-```javascript
-pm.test("HTTP 500", function () {
-    pm.response.to.have.status(500);
-});
-
-pm.test("Content-Type JSON", function () {
-    const contentType = pm.response.headers.get("Content-Type");
-    pm.expect(contentType).to.include("application/json");
-});
-
-pm.test("Respuesta de error controlado", function () {
-    const json = pm.response.json();
-    pm.expect(json.laboratorio).to.eql("13.2");
-    pm.expect(json.estado).to.eql("ERROR_CONTROLADO");
-    pm.expect(json.mensaje).to.eql(
-        "La excepcion fue capturada por Exception Subprocess"
-    );
-});
-```
-
-La ejecución final mostrada en Postman obtuvo **4/4 PASSED**, porque el test `Content-Type JSON` estaba anidado y duplicado en el script mostrado. Las cuatro comprobaciones ejecutadas fueron exitosas; el código anterior representa la forma depurada, con tres tests independientes. La ejecución final se verificó visualmente, sin añadir una captura adicional al conjunto de evidencias del capítulo.
-
-### Comparación validada
-
-| Aspecto | 13.1: sin Exception Subprocess | 13.2: con Exception Subprocess |
-|---|---|---|
-| Excepción provocada | `IllegalStateException` | `IllegalStateException` |
-| Código HTTP | 500 | 500 |
-| Body HTTP | Mensaje genérico de CPI | JSON personalizado |
-| Finalización del tratamiento | Sin tratamiento de excepción | End Message |
-| Estado MPL observado | `Failed` | `Completed` |
-
-### Validación y aprendizajes
-
-**Resultado esperado y confirmado:** el Exception Subprocess intercepta la excepción y permite devolver una respuesta personalizada. El código HTTP y el estado MPL representan aspectos distintos: en esta configuración concreta se devolvió HTTP 500 mientras el procesamiento quedó `Completed`. Para la monitorización, no debe asumirse que todos los errores HTTP aparecen como mensajes `Failed`.
+Se comprobó la diferencia entre **estado HTTP 500** y **estado interno MPL `Completed`**. Cuando la excepción se trata y el subproceso termina con Message End, el monitor puede mostrar una ejecución completada aunque el consumidor haya recibido un error. La monitorización de integraciones debe contemplar ambas dimensiones.
 
 ---
 
-## Problemas encontrados y aprendizajes del capítulo
+## 13.3 - Información de la excepción
 
-- El script de error intencional puede provocar advertencias de análisis estático si contiene código inalcanzable o parámetros no utilizados. La implementación definitiva utiliza el objeto `message` antes de lanzar la excepción.
-- El estado `Started` del iFlow verifica el despliegue, no el éxito de cada mensaje.
-- La excepción detallada se identificó en MPL; la respuesta HTTP sin tratamiento no exponía directamente ese texto.
-- `End Message` dentro del Exception Subprocess permitió observar MPL `Completed` con HTTP 500. Este comportamiento se comprobó en el escenario concreto del laboratorio, sin extrapolarlo a todos los adaptadores o tipos de finalización.
-- Al reutilizar un iFlow para otro laboratorio, se debe preservar primero la versión anterior, antes de efectuar cambios de diseño.
+**Estado:** ✅ Completado
+**Versión desplegada:** `1.0.3`
+**Postman:** `13.3 - Detalle de excepción`
+
+### Objetivo
+
+Obtener información real de una excepción capturada y utilizarla en una respuesta dinámica para comprender la información diagnóstica disponible.
+
+### Laboratorio paso a paso
+
+1. Crear una nueva versión del iFlow reutilizado, conservando el Exception Subprocess y la lógica de error del ejercicio anterior.
+
+2. En `CM_Respuesta_Error`, crear una **Exchange Property**:
+
+   | Campo | Valor |
+   |---|---|
+   | Action | `Create` |
+   | Name | `ExcepcionCapturada` |
+   | Source Type | `Expression` |
+   | Source Value | `${exception.message}` |
+   | Data Type | `java.lang.String` |
+
+   **Motivo:** capturar la información de la excepción y reutilizarla desde el body mediante una propiedad del intercambio.
+
+   **Evidencia 13-19 - Propiedad de excepción.** Expresión utilizada para recuperar el detalle.
+
+   ![Evidencia 13-19 - Exchange Property](images/tema-13/13-19-exchange-property-excepcion-capturada.png)
+
+3. Cambiar el **Message Body** a `Type = Expression`:
+
+   ```json
+   {
+     "laboratorio": "13.3",
+     "estado": "ERROR_CONTROLADO",
+     "mensaje": "La excepcion fue capturada por Exception Subprocess",
+     "detalleExcepcion": "${property.ExcepcionCapturada}"
+   }
+   ```
+
+   **Motivo:** comprobar la interpolación de una propiedad calculada durante el tratamiento del error, en lugar de devolver exclusivamente texto fijo. Este formato es didáctico; no se recomienda exponer detalles técnicos internos a consumidores de una API productiva.
+
+   **Evidencia 13-20 - Body dinámico.** Respuesta con referencia a la Exchange Property.
+
+   ![Evidencia 13-20 - Message Body](images/tema-13/13-20-content-modifier-body-detalle-excepcion.png)
+
+4. Guardar, desplegar la versión `1.0.3` y verificar `Started`.
+
+   **Evidencia 13-21 - Despliegue.** Versión iniciada y endpoint disponible.
+
+   ![Evidencia 13-21 - Started](images/tema-13/13-21-iflow-detalle-excepcion-started.png)
+
+5. Ejecutar la petición independiente de Postman y comprobar HTTP `500`, `laboratorio = 13.3`, `estado = ERROR_CONTROLADO` y un campo `detalleExcepcion` que contiene la excepción original, incluida la clase `java.lang.IllegalStateException`.
+
+   **Evidencia 13-22 - Detalle real en Postman.** Respuesta con la excepción capturada.
+
+   ![Evidencia 13-22 - Respuesta](images/tema-13/13-22-postman-detalle-excepcion-respuesta.png)
+
+   **Evidencia 13-23 - Tests de detalle.** Cuatro aserciones aprobadas, incluida la comprobación de la excepción real.
+
+   ![Evidencia 13-23 - Tests](images/tema-13/13-23-postman-detalle-excepcion-tests.png)
+
+### Resultado, validación y aprendizajes
+
+La respuesta incluyó el detalle real de la excepción y **4/4 tests Postman aprobados**. Se comprobó el uso de expresiones y Exchange Properties para diagnóstico. Exponer nombres de clases, archivos o trazas en una respuesta HTTP es útil en el laboratorio, pero debe evitarse en integraciones productivas.
+
+---
+
+## 13.4 - Errores funcionales y técnicos
+
+**Estado:** ✅ Completado
+**Versión desplegada observada:** `1.0.4` (versión de diseño/runtime comprobada antes de las pruebas finales)
+**Script:** `GRV_ProvocarError_v2.groovy`
+**Postman:** `13.4 - Error funcional`, `13.4 - Error tecnico`, `13.4 - Solicitud valida`
+
+### Objetivo
+
+Diferenciar tres resultados: éxito HTTP 200, rechazo funcional HTTP 400 y fallo técnico HTTP 500, evitando confundir errores de negocio con excepciones del runtime.
+
+### Laboratorio paso a paso
+
+1. Crear una nueva versión antes de modificar el iFlow reutilizado. Sustituir el recurso Groovy del paso `Provocar Error` por `GRV_ProvocarError_v2.groovy` para evaluar el JSON de entrada y producir tres rutas posibles.
+
+   ```groovy
+   import com.sap.gateway.ip.core.customdev.util.Message
+   import groovy.json.JsonSlurper
+   import groovy.json.JsonOutput
+
+   def Message processData(Message message) {
+       def body = new JsonSlurper().parse(message.getBody(java.io.Reader))
+
+       if (body.escenario == "tecnico") {
+           throw new IllegalStateException(
+               "LAB13_04: Fallo tecnico provocado intencionalmente"
+           )
+       }
+
+       if (body.monto == null || !(body.monto instanceof Number) ||
+           body.monto <= 0) {
+
+           message.setHeader("CamelHttpResponseCode", 400)
+           message.setHeader("Content-Type", "application/json")
+
+           message.setBody(JsonOutput.toJson([
+               laboratorio: "13.4",
+               tipoError: "FUNCIONAL",
+               codigo: "MONTO_INVALIDO",
+               mensaje: "El monto debe ser mayor que cero"
+           ]))
+
+           return message
+       }
+
+       message.setHeader("CamelHttpResponseCode", 200)
+       message.setHeader("Content-Type", "application/json")
+
+       message.setBody(JsonOutput.toJson([
+           laboratorio: "13.4",
+           estado: "OK",
+           mensaje: "Solicitud procesada correctamente",
+           monto: body.monto
+       ]))
+
+       return message
+   }
+   ```
+
+   **Motivo:** una entrada inválida de negocio puede resolverse con HTTP 400 sin lanzar excepción. La rama técnica utiliza `throw` para activar el Exception Subprocess. La solicitud válida retorna HTTP 200.
+
+   **Evidencia 13-24 - Groovy de tres escenarios.** Script con condiciones técnica, funcional y exitosa.
+
+   ![Evidencia 13-24 - Groovy](images/tema-13/13-24-groovy-errores-funcionales-tecnicos.png)
+
+2. Cambiar `CM_Respuesta_Error` para devolver una respuesta técnica genérica mediante **Message Body, Type = Constant**:
+
+   ```json
+   {
+     "laboratorio": "13.4",
+     "tipoError": "TECNICO",
+     "codigo": "ERROR_INTERNO",
+     "mensaje": "Ocurrio un error durante el procesamiento"
+   }
+   ```
+
+   Conservar en el Exception Subprocess `CamelHttpResponseCode = 500` y `Content-Type = application/json`. Esos headers se aplican cuando se ejecuta esta ruta, no a todas las respuestas del iFlow.
+
+   **Motivo:** impedir que los detalles internos de una excepción se filtren al consumidor.
+
+   **Evidencia 13-25 - Respuesta técnica genérica.** Content Modifier configurado para errores técnicos.
+
+   ![Evidencia 13-25 - Content Modifier](images/tema-13/13-25-content-modifier-error-tecnico.png)
+
+3. Guardar y desplegar el iFlow. Se comprobó `Started` para la versión `1.0.4` antes de las pruebas. Tras un ajuste de sintaxis del script, se volvieron a ejecutar las pruebas y se obtuvieron los resultados esperados. El comportamiento del editor ante esa sintaxis se documenta separadamente en el KBA.
+
+4. **Error funcional:** enviar en la petición `13.4 - Error funcional`:
+
+   ```json
+   {"escenario":"funcional","monto":-100}
+   ```
+
+   **Resultado observado:** HTTP `400 Bad Request`:
+
+   ```json
+   {
+     "laboratorio":"13.4",
+     "tipoError":"FUNCIONAL",
+     "codigo":"MONTO_INVALIDO",
+     "mensaje":"El monto debe ser mayor que cero"
+   }
+   ```
+
+   Se aprobaron **7/7 tests** de Postman.
+
+   **Evidencia 13-26 - HTTP 400 funcional.** Respuesta de rechazo por monto inválido.
+
+   ![Evidencia 13-26 - HTTP 400](images/tema-13/13-26-postman-error-funcional-http400.png)
+
+   **Evidencia 13-27 - Tests funcionales.** Siete validaciones aprobadas.
+
+   ![Evidencia 13-27 - Tests](images/tema-13/13-27-postman-error-funcional-tests.png)
+
+5. **Error técnico:** enviar en la petición `13.4 - Error tecnico`:
+
+   ```json
+   {"escenario":"tecnico","monto":100}
+   ```
+
+   **Resultado observado:** HTTP `500 Internal Server Error` con `tipoError = TECNICO`, `codigo = ERROR_INTERNO` y mensaje genérico. Se aprobaron **4/4 tests**.
+
+   **Evidencia 13-28 - HTTP 500 técnico.** Respuesta controlada sin detalles internos.
+
+   ![Evidencia 13-28 - HTTP 500](images/tema-13/13-28-postman-error-tecnico-http500.png)
+
+   **Evidencia 13-29 - Tests técnicos.** Cuatro comprobaciones aprobadas.
+
+   ![Evidencia 13-29 - Tests](images/tema-13/13-29-postman-error-tecnico-tests.png)
+
+6. **Solicitud válida:** enviar en la petición `13.4 - Solicitud valida`:
+
+   ```json
+   {"escenario":"correcto","monto":100}
+   ```
+
+   **Resultado observado:** HTTP `200 OK`:
+
+   ```json
+   {
+     "laboratorio":"13.4",
+     "estado":"OK",
+     "mensaje":"Solicitud procesada correctamente",
+     "monto":100
+   }
+   ```
+
+   Se aprobaron **4/4 tests** de Postman.
+
+   **Evidencia 13-30 - HTTP 200 válido.** Respuesta normal con monto 100.
+
+   ![Evidencia 13-30 - HTTP 200](images/tema-13/13-30-postman-solicitud-valida-http200.png)
+
+   **Evidencia 13-31 - Tests de solicitud válida.** Cuatro comprobaciones aprobadas.
+
+   ![Evidencia 13-31 - Tests](images/tema-13/13-31-postman-solicitud-valida-tests.png)
+
+### Resultado y validación
+
+| Escenario | HTTP | Respuesta | Tests |
+|---|---|---|---|
+| Válido | 200 | `estado = OK`, `monto = 100` | 4/4 |
+| Error funcional | 400 | `tipoError = FUNCIONAL`, `codigo = MONTO_INVALIDO` | 7/7 |
+| Error técnico | 500 | `tipoError = TECNICO`, `codigo = ERROR_INTERNO` | 4/4 |
+
+### Problemas encontrados y aprendizajes
+
+- Un fallo de compilación del script activó el Exception Subprocess y produjo inicialmente HTTP 500 en una prueba funcional. El MPL permitió identificar el error de sintaxis; se corrigió y las tres rutas quedaron validadas. El caso concreto y la particularidad del editor se registran en `docs/kba-y-hallazgos.md`.
+- El código HTTP no depende únicamente de que exista un header configurado en el diseño: depende de la ruta que se ejecuta.
+- Los errores funcionales no necesitan convertirse artificialmente en excepciones técnicas.
+- La respuesta técnica debe evitar divulgar mensajes internos de excepción.
+
+---
+
+## 13.5 - Message End vs Error End
+
+**Estado:** ⬜ Pendiente
+
+**Objetivo previsto:** contrastar los eventos de finalización y sus efectos sobre la respuesta y el monitoreo. **Sin laboratorio implementado ni validado todavía.**
+
+## 13.6 - Manejo centralizado y buenas prácticas
+
+**Estado:** ⬜ Pendiente
+
+**Objetivo previsto:** consolidar patrones de tratamiento de errores, respuesta al consumidor y observabilidad. **Sin laboratorio implementado ni validado todavía.**
+
+## Aprendizajes consolidados
+
+1. HTTP 500 no implica necesariamente MPL `Failed`; una excepción capturada y finalizada con Message End puede producir MPL `Completed`.
+2. El MPL es indispensable para localizar errores técnicos que no se muestran en la respuesta HTTP.
+3. La información real de la excepción puede recuperarse en un Exception Subprocess, pero no debe exponerse indiscriminadamente en producción.
+4. Los errores de validación de negocio y las excepciones técnicas requieren rutas de respuesta diferentes.
+5. Un despliegue `Started` debe complementarse con pruebas de procesamiento reales.
 
 ## Referencias
 
-- [SAP Help Portal - SAP Integration Suite](https://help.sap.com/docs/integration-suite)
-- [SAP Help Portal - Cloud Integration](https://help.sap.com/docs/cloud-integration)
+- [SAP Integration Suite - SAP Help Portal](https://help.sap.com/docs/integration-suite)
 - [Metodología de laboratorios](METODOLOGIA-LABORATORIOS.md)
 - [KBA y hallazgos](kba-y-hallazgos.md)
 
-> Las rutas `images/tema-13/` siguen la convención de evidencias del curso. Las imágenes se referencian por su nombre acordado; su incorporación física al repositorio debe comprobarse al publicar el documento.
+**Nota de evidencias:** las rutas relativas `images/tema-13/` siguen la convención del repositorio. Las imágenes se deben incorporar a esa carpeta con los nombres indicados antes de publicar este Markdown. Los nombres de las evidencias 13-19 a 13-25 deben contrastarse con los archivos efectivamente guardados, pues no se ha verificado su existencia en GitHub.
