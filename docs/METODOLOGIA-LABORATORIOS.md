@@ -172,3 +172,39 @@ Al iniciar una nueva conversación o capítulo, **releer las referencias del rep
 
 Antes de configurar componentes utilizados anteriormente, revisar las particularidades ya documentadas para evitar repetir errores o configuraciones innecesarias.
 
+## 13. Responsabilidades y entrega de documentación
+
+### 13.1. Administración del repositorio
+
+- El usuario administra el repositorio GitHub: incorpora archivos, imágenes y colecciones, realiza commits y publica los cambios.
+- El asistente utiliza GitHub para **consultar y verificar** la versión vigente. No debe crear commits, modificar archivos remotos ni intentar subir documentación, salvo que el usuario lo solicite expresamente.
+- La ausencia de permisos de escritura del asistente no impide continuar: el mecanismo habitual es entregar archivos descargables.
+
+### 13.2. Entregables del asistente
+
+- Para cada capítulo, entregar un **Markdown completo, consolidado y descargable**, construido sobre la última versión verificada del repositorio.
+- Para cambios en `README.md`, entregar por defecto un **fragmento identificable para reemplazo**; generar el README completo únicamente cuando el usuario lo solicite.
+- Para `docs/kba-y-hallazgos.md`, entregar el texto de las incorporaciones correspondientes, sin reescribir el historial existente innecesariamente.
+- Informar con precisión qué archivo debe reemplazarse y qué fragmento debe incorporarse. No afirmar que los cambios ya están publicados.
+- Entregar los archivos Markdown en **UTF-8 con BOM** y verificar que los caracteres acentuados se conserven correctamente.
+
+### 13.3. Conservación de evidencias
+
+- Antes de editar un capítulo, consultar su versión actual y revisar los nombres y números de evidencias existentes.
+- Mantener las referencias de imágenes ya documentadas. Las nuevas evidencias deben seguir la numeración correlativa y aparecer junto al paso que demuestran, con título y descripción.
+- **No inventar nombres, rutas ni existencia de capturas.** Si una captura fue vista en la conversación pero no se ha acordado su nombre definitivo, solicitarlo o dejar explícita esa limitación antes de cerrar la documentación.
+- Evitar capturas duplicadas cuando una evidencia anterior ya demuestra el resultado.
+- No declarar que una imagen está subida al repositorio sin verificarla allí.
+
+### 13.4. Control previo a la entrega
+
+Antes de ofrecer los archivos descargables, comprobar:
+
+1. Que se utilizó la versión vigente del documento, sin perder laboratorios ni evidencias anteriores.
+2. Que los estados reflejan las validaciones prácticas y coinciden con el fragmento de README.
+3. Que cada evidencia nueva tiene numeración, nombre, descripción y ubicación verificables.
+4. Que no hay comentarios internos, tareas resueltas ni iteraciones descartadas.
+5. Que los enlaces relativos, acentos y codificación son correctos.
+6. Que se distingue lo efectivamente validado de lo pendiente y que no se incluyen secretos.
+
+**Regla de continuidad:** al comenzar una nueva conversación, aplicar este procedimiento aunque el asistente disponga de herramientas con capacidad de escritura en GitHub.
