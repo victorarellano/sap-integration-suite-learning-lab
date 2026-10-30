@@ -1,6 +1,6 @@
 # 14 - Monitorización, MPL y trazabilidad
 
-**Estado del tema:** 🟨 En curso
+**Estado del tema:** ✅ Completado
 **Package:** `CPI Learning Lab`
 **iFlow reutilizado:** `LAB13_01_Error_No_Controlado`
 **Versión desplegada observada:** `1.0.6`
@@ -39,8 +39,8 @@ Localizar ejecuciones de Cloud Integration, interpretar estados y registros de p
 | 14.2 | MPL: identificadores, segmentos y tiempos | ✅ Completado | Message ID, Correlation ID, segmentos y tiempos; evidencias 14-09 a 14-13 |
 | 14.3 | Trace y seguimiento paso a paso | ✅ Completado | Trace, Run Steps, Model Step ID y payload inspeccionados |
 | 14.4 | Headers, Properties y Body durante la ejecución | ✅ Completado | Comparación de HTTPS, headers, propiedades y payload |
-| 14.5 | Diagnóstico de errores técnicos y funcionales | ⬜ Pendiente | — |
-| 14.6 | Correlación y trazabilidad de mensajes | ⬜ Pendiente | — |
+| 14.5 | Diagnóstico de errores técnicos y funcionales | ✅ Completado | HTTP 200/400/500, MPL Completed y LastError; evidencias 14-14 a 14-20 |
+| 14.6 | Correlación y trazabilidad de mensajes | ✅ Completado | Búsqueda de la misma ejecución por Message ID y Correlation ID; evidencias 14-21 y 14-22 |
 
 ---
 
@@ -285,6 +285,177 @@ Se comprobó el cambio del Body desde el JSON original a la respuesta funcional,
 
 ---
 
+## 14.5 - Diagnóstico de errores técnicos y funcionales
+
+**Estado:** ✅ Completado
+
+### Objetivo
+
+Contrastar respuestas HTTP, estados MPL y registros de excepción, distinguiendo un error funcional de una excepción técnica tratada por el Exception Subprocess.
+
+### Prerrequisitos
+
+- iFlow `LAB13_01_Error_No_Controlado` desplegado, versión observada `1.0.6`.
+- Peticiones existentes en Postman, carpeta **Lab 13 - Manejo de Errores y Exception Subprocess**: `13.6 - Solicitud válida - HTTP 200`, `13.6 - Error funcional - HTTP 400` y `13.6 - Error técnico - HTTP 500`.
+- Monitor Message Processing accesible. No se modifica el iFlow ni se crean peticiones duplicadas.
+
+### Laboratorio paso a paso
+
+1. Ejecutar en Postman **13.6 - Solicitud válida - HTTP 200** con el cuerpo:
+
+   ```json
+   {"escenario":"correcto","monto":100}
+   ```
+
+   **Motivo:** establecer una línea base sin error de negocio ni excepción técnica.
+
+   **Resultado observado:** HTTP `200 OK`; JSON con `laboratorio = 13.4`, `estado = OK`, `mensaje = Solicitud procesada correctamente` y `monto = 100`. Postman mostró `Test Results 1/1`.
+
+   **Evidencia 14-14 — Solicitud válida en Postman.** Petición, respuesta HTTP 200, cuerpo JSON y prueba aprobada.
+
+   ![Evidencia 14-14 — Solicitud válida HTTP 200](images/tema-14/14-14-postman-diagnostico-http-200.png)
+
+2. Buscar en **Monitor Message Processing** la ejecución de esa prueba para `LAB13_01_Error_No_Controlado`.
+
+   **Motivo:** verificar el resultado de procesamiento de la ejecución correcta, independiente de la respuesta del consumidor.
+
+   **Resultado observado:** MPL `Completed`, `Processing Time = 39 ms`, `Log Level = Info`, actualizado el 30/10/2026 a las 12:44:09 (GMT-03:00).
+
+   **Evidencia 14-15 — MPL de la solicitud válida.** Registro Completed con tiempo de procesamiento y nivel de logging.
+
+   ![Evidencia 14-15 — MPL HTTP 200](images/tema-14/14-15-monitor-diagnostico-http-200-mpl.png)
+
+3. Ejecutar en Postman **13.6 - Error funcional - HTTP 400** con el cuerpo:
+
+   ```json
+   {"escenario":"funcional","monto":-100}
+   ```
+
+   **Motivo:** provocar una validación de negocio y comprobar el contrato de error funcional.
+
+   **Resultado observado:** HTTP `400 Bad Request`; JSON con `tipoError = FUNCIONAL`, `codigo = MONTO_INVALIDO` y `mensaje = El monto debe ser mayor que cero`. Postman mostró `Test Results 1/1`.
+
+   **Evidencia 14-16 — Error funcional en Postman.** HTTP 400 y respuesta JSON de validación.
+
+   ![Evidencia 14-16 — Error funcional HTTP 400](images/tema-14/14-16-postman-diagnostico-http-400.png)
+
+4. Localizar la ejecución de esa petición en el monitor.
+
+   **Motivo:** comprobar si el rechazo funcional también implica un fallo técnico de procesamiento.
+
+   **Resultado observado:** MPL `Completed`, `Processing Time = 8 ms`, `Log Level = Info`, actualizado el 30/10/2026 a las 12:46:36 (GMT-03:00).
+
+   **Evidencia 14-17 — MPL del error funcional.** HTTP 400 en Postman y procesamiento Completed en SAP.
+
+   ![Evidencia 14-17 — MPL HTTP 400](images/tema-14/14-17-monitor-diagnostico-http-400-mpl.png)
+
+5. Ejecutar en Postman **13.6 - Error técnico - HTTP 500** con el cuerpo:
+
+   ```json
+   {"escenario":"tecnico","monto":100}
+   ```
+
+   **Motivo:** contrastar una excepción técnica tratada con el rechazo funcional del paso anterior.
+
+   **Resultado observado:** HTTP `500 Internal Server Error`; JSON con `tipoError = TECNICO`, `codigo = ERROR_INTERNO` y `mensaje = Ocurrio un error durante el procesamiento`. Postman mostró `Test Results 1/1`. El consumidor recibió un mensaje genérico, sin el detalle de la excepción interna.
+
+   **Evidencia 14-18 — Error técnico en Postman.** HTTP 500 y contrato JSON controlado.
+
+   ![Evidencia 14-18 — Error técnico HTTP 500](images/tema-14/14-18-postman-diagnostico-http-500.png)
+
+6. Localizar el mensaje HTTP 500 en **Monitor Message Processing**.
+
+   **Motivo:** comprobar si la excepción tratada por el Exception Subprocess concluye como Completed o Failed.
+
+   **Resultado observado:** MPL `Completed`, `Processing Time = 47 ms`, `Log Level = Info`, actualizado el 30/10/2026 a las 12:51:20 (GMT-03:00).
+
+   **Evidencia 14-19 — MPL del error técnico.** Estado Completed y duración de la ejecución que devolvió HTTP 500.
+
+   ![Evidencia 14-19 — MPL HTTP 500](images/tema-14/14-19-monitor-diagnostico-http-500-mpl.png)
+
+7. Abrir **Logs → Open Text View** del mensaje anterior.
+
+   **Motivo:** localizar el origen técnico de una excepción sin depender del mensaje HTTP mostrado al consumidor.
+
+   **Resultado observado:** `OverallStatus = COMPLETED`, `IntermediateError = true`, `LastErrorModelStepId = CallActivity_5` y `LastError` con `IllegalStateException`, referencia a `GRV_ProvocarError_v2.groovy` y línea `10`. El mensaje técnico identifica un fallo provocado intencionalmente en el laboratorio 13.4.
+
+   **Evidencia 14-20 — Diagnóstico técnico en MPL.** Excepción original, script, línea e identificador del paso.
+
+   ![Evidencia 14-20 — LastError HTTP 500](images/tema-14/14-20-monitor-diagnostico-http-500-last-error.png)
+
+8. Contrastar el resultado con las ejecuciones `Failed` ya verificadas en **14.1**, evidencias **14-07** y **14-08**.
+
+   **Motivo:** diferenciar una excepción gestionada que finaliza Completed de un procesamiento que realmente termina Failed, sin generar capturas duplicadas.
+
+### Resultado esperado y validación
+
+| Escenario | Respuesta HTTP | Estado MPL | Processing Time | Diagnóstico |
+|---|---|---|---|---|
+| Solicitud válida | 200 | Completed | 39 ms | Respuesta funcional correcta |
+| Error funcional | 400 | Completed | 8 ms | Validación `MONTO_INVALIDO` |
+| Error técnico controlado | 500 | Completed | 47 ms | `IntermediateError = true`; `IllegalStateException` en script Groovy |
+
+**Validación:** los tres contratos HTTP se observaron en Postman y sus ejecuciones correspondientes se localizaron como Completed. En el caso HTTP 500, el MPL conservó la causa técnica. Las evidencias 14-07 y 14-08 documentan, por contraste, un procesamiento Failed de una ejecución anterior.
+
+### Aprendizajes
+
+- El código HTTP y el estado MPL describen dimensiones diferentes.
+- Un Exception Subprocess puede tratar una excepción técnica y finalizar con MPL Completed, conservando `LastError` para diagnóstico.
+- La respuesta HTTP puede ser deliberadamente genérica mientras el MPL mantiene información técnica útil.
+- Los tiempos de 39, 8 y 47 ms corresponden a ejecuciones distintas; no constituyen una comparación de rendimiento controlada.
+
+---
+
+## 14.6 - Correlación y trazabilidad de mensajes
+
+**Estado:** ✅ Completado
+
+### Objetivo
+
+Recuperar una ejecución mediante sus identificadores de mensaje y correlación, y comprobar el comportamiento del enlace de búsqueda de mensajes correlacionados.
+
+### Prerrequisitos
+
+- Ejecución HTTP 500 del laboratorio 14.5 disponible en el monitor.
+- Acceso a la pestaña Properties de esa ejecución.
+
+### Laboratorio paso a paso
+
+1. En **Monitor Message Processing**, copiar el `Message ID` de la ejecución HTTP 500 y buscarlo en el campo superior.
+
+   **Motivo:** recuperar de forma inequívoca una ejecución concreta sin depender del orden temporal del listado.
+
+   **Resultado observado:** filtro `Filtered by Message ID`, **1 mensaje** de `LAB13_01_Error_No_Controlado`, estado `Completed`, `Processing Time = 47 ms`, actualizado el 30/10/2026 a las 12:51:20 (GMT-03:00).
+
+   **Evidencia 14-21 — Búsqueda por Message ID.** Resultado único correspondiente al error técnico tratado.
+
+   ![Evidencia 14-21 — Búsqueda por Message ID](images/tema-14/14-21-monitor-correlacion-busqueda-message-id.png)
+
+2. En **Properties**, seleccionar el enlace del `Correlation ID` de esa misma ejecución. SAP muestra la ayuda `Click to search for all correlated messages`.
+
+   **Motivo:** utilizar la navegación nativa del monitor para buscar ejecuciones con el mismo identificador de correlación.
+
+   **Resultado observado:** filtro `Filtered by Correlation ID`, **1 mensaje**, que coincide con la ejecución recuperada en el paso anterior: mismo iFlow, estado Completed y 47 ms. La captura corresponde a la búsqueda efectuada mediante el enlace, por lo que no se solicita otra imagen.
+
+   **Evidencia 14-22 — Búsqueda por Correlation ID.** Enlace de correlación y resultado único recuperado.
+
+   ![Evidencia 14-22 — Búsqueda por Correlation ID](images/tema-14/14-22-monitor-correlacion-busqueda-correlation-id.png)
+
+### Resultado esperado y validación
+
+Se recuperó la misma ejecución por Message ID y por Correlation ID. Se comprobó el acceso directo a la búsqueda de correlación desde la pestaña Properties.
+
+**Alcance de la prueba:** el monitor devolvió **un solo mensaje**. No se demostró correlación entre múltiples ejecuciones ni propagación de un Correlation ID entre varios iFlows. Esos comportamientos no deben inferirse de este laboratorio.
+
+### Aprendizajes
+
+- `Message ID` permite localizar una ejecución específica.
+- `Correlation ID` permite consultar mensajes que comparten un identificador de correlación; la cantidad real de resultados depende de los mensajes disponibles.
+- El enlace de Correlation ID evita volver a copiar y pegar el identificador.
+- Un resultado único es suficiente para validar la búsqueda, pero no demuestra trazabilidad distribuida entre sistemas.
+
+---
+
 ## Problemas encontrados y hallazgos
 
 - La pestaña General del artefacto desplegado no mostraba la correspondencia de `CallActivity_5`; Trace permitió confirmarla para `Provocar Error`.
@@ -292,9 +463,16 @@ Se comprobó el cambio del Body desde el JSON original a la respuesta funcional,
 - Los dos registros HTTPS compartieron `MessageFlow_4`, pero representaron etapas distintas de la recepción.
 - La observación de nombres e IDs en esta ejecución no demuestra una regla universal sobre el efecto de renombrar componentes.
 
+## Aprendizajes consolidados
+
+- Un HTTP 200, 400 o 500 puede corresponder a MPL Completed según el tratamiento realizado en el iFlow.
+- `LastError`, `IntermediateError` y `LastErrorModelStepId` permiten diagnosticar una excepción aun cuando la ejecución termina Completed.
+- Trace permite inspeccionar contenido y pasos; debe activarse temporalmente y con precaución sobre datos sensibles.
+- `Message ID` identifica una ejecución y `Correlation ID` sirve como criterio de búsqueda de mensajes relacionados.
+
 ## Continuidad del capítulo
 
-Los laboratorios 14.1 a 14.4 quedaron validados mediante pruebas prácticas. Permanecen pendientes 14.5 y 14.6. El capítulo continúa **🟨 En curso**. Durante los laboratorios 14.3 y 14.4 se cambió temporalmente el nivel de logging a Trace, sin modificar ni versionar el iFlow.
+Los seis laboratorios del capítulo quedaron validados mediante pruebas prácticas. El capítulo se marca **✅ Completado**. Se reutilizó el iFlow `LAB13_01_Error_No_Controlado` sin modificar su diseño ni crear nuevas versiones. Durante 14.3 y 14.4 se cambió temporalmente el nivel de logging a Trace. La correlación entre múltiples mensajes o iFlows no fue objeto de una validación práctica y no se presenta como resultado demostrado.
 
 ## Referencias
 
