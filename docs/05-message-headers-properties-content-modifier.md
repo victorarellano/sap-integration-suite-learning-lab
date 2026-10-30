@@ -1,7 +1,7 @@
 # 05 - Message, Headers, Properties y Content Modifier
 
 **Estado:** ✅ Completado
-**Área:** SAP Integration Suite — Cloud Integration
+**Área:** SAP Integration Suite - Cloud Integration
 **Package:** `CPI Learning Lab`
 **iFlow:** `Message Headers Properties Lab`
 
@@ -24,11 +24,11 @@ Distinguir Body, Message Headers y Exchange Properties; configurarlos mediante C
 - Package `CPI Learning Lab`.
 - Cliente HTTP y mecanismo de autenticación previamente validados en el tema 04. No registrar credenciales ni tokens reales.
 
-## Laboratorio 05.1 — Crear y reutilizar Headers y Properties
+## Laboratorio 05.1 - Crear y reutilizar Headers y Properties
 
 **Estado:** ✅ Completado
 
-### Paso 1 — Crear el iFlow
+### Paso 1 - Crear el iFlow
 
 1. Abrir **Design → Integrations and APIs** y el package `CPI Learning Lab`.
 2. Crear el iFlow `Message Headers Properties Lab`.
@@ -36,11 +36,11 @@ Distinguir Body, Message Headers y Exchange Properties; configurarlos mediante C
 
 **Por qué:** preservar los artefactos y resultados del tema 04.
 
-**Evidencia — iFlow creado**
+**Evidencia - iFlow creado**
 
 ![Figura 05-01. iFlow Message Headers Properties Lab creado en el package CPI Learning Lab, antes de completar su diseño.](./images/tema-05/05-01-iflow-creado.png)
 
-### Paso 2 — Configurar HTTPS Sender
+### Paso 2 - Configurar HTTPS Sender
 
 1. Conectar el participante Sender al evento Start mediante el adaptador **HTTPS**.
 2. En **Connection**, establecer `Address` como `/lab05/message`.
@@ -50,11 +50,11 @@ Distinguir Body, Message Headers y Exchange Properties; configurarlos mediante C
 
 **Por qué:** disponer de un endpoint para ejecutar el flujo y comprobar su resultado desde un cliente HTTP.
 
-**Evidencia — HTTPS Sender configurado**
+**Evidencia - HTTPS Sender configurado**
 
 ![Figura 05-02. Pestaña Connection del adaptador HTTPS Sender, con la dirección /lab05/message.](./images/tema-05/05-02-https-sender-configuracion.png)
 
-### Paso 3 — Crear Header y Exchange Property
+### Paso 3 - Crear Header y Exchange Property
 
 Agregar un **Content Modifier** después de Start y nombrarlo `Set Message Metadata`.
 
@@ -70,7 +70,7 @@ En **Message Header**:
 
 **Por qué:** identificar el origen del procesamiento mediante metadatos del mensaje.
 
-**Evidencia — Header creado**
+**Evidencia - Header creado**
 
 ![Figura 05-03. Configuración del header origen como constante en Set Message Metadata.](./images/tema-05/05-03-content-modifier-header.png)
 
@@ -86,11 +86,11 @@ En **Exchange Property**:
 
 **Por qué:** conservar un identificador interno reutilizable en el mismo intercambio.
 
-**Evidencia — Property creada**
+**Evidencia - Property creada**
 
 ![Figura 05-04. Configuración de la exchange property idProceso como constante en Set Message Metadata.](./images/tema-05/05-04-content-modifier-property.png)
 
-### Paso 4 — Construir la respuesta
+### Paso 4 - Construir la respuesta
 
 1. Agregar un segundo **Content Modifier** después de `Set Message Metadata`, llamado `Build Response`.
 2. En **Message Body**, elegir **Expression** y establecer:
@@ -106,7 +106,7 @@ En **Exchange Property**:
 
 **Por qué:** resolver valores del header y de la property creados en un paso anterior. Los valores constantes elegidos para esta prueba no requieren escape JSON adicional.
 
-**Evidencia — Body con expresiones**
+**Evidencia - Body con expresiones**
 
 ![Figura 05-05. Message Body del Content Modifier Build Response, con expresiones para recuperar header y property.](./images/tema-05/05-05-content-modifier-body.png)
 
@@ -114,11 +114,11 @@ En **Exchange Property**:
 
 **Por qué:** indicar que el cuerpo de la respuesta corresponde a JSON.
 
-**Evidencia — Content-Type**
+**Evidencia - Content-Type**
 
 ![Figura 05-06. Header Content-Type configurado como application/json en Build Response.](./images/tema-05/05-06-content-modifier-content-type.png)
 
-### Paso 5 — Desplegar y ejecutar
+### Paso 5 - Desplegar y ejecutar
 
 1. Guardar y desplegar el iFlow.
 2. Comprobar el estado **Started** en **Monitor → Integrations and APIs → Manage Integration Content**.
@@ -128,7 +128,7 @@ En **Exchange Property**:
 
 **Por qué:** la configuración solo queda validada cuando se ejecuta en el runtime y devuelve el resultado esperado.
 
-**Evidencia — Despliegue**
+**Evidencia - Despliegue**
 
 ![Figura 05-07. iFlow Message Headers Properties Lab desplegado con estado Started.](./images/tema-05/05-07-iflow-deployed.png)
 
@@ -143,11 +143,11 @@ En **Exchange Property**:
 }
 ```
 
-**Evidencia — Respuesta HTTP**
+**Evidencia - Respuesta HTTP**
 
 ![Figura 05-08. Solicitud HTTP con respuesta 200 OK y JSON que incluye los valores recuperados del header y la property.](./images/tema-05/05-08-http-response.png)
 
-**Evidencia — Monitorización**
+**Evidencia - Monitorización**
 
 ![Figura 05-09. Mensaje del laboratorio 05.1 registrado como Completed en Monitor Message Processing.](./images/tema-05/05-09-message-monitoring.png)
 
@@ -160,11 +160,11 @@ En **Exchange Property**:
 | Contenido JSON | Coincide con lo esperado |
 | Monitorización | Completed |
 
-## Laboratorio 05.2 — Reemplazar Body sin redefinir metadatos
+## Laboratorio 05.2 - Reemplazar Body sin redefinir metadatos
 
 **Estado:** ✅ Completado
 
-### Paso 1 — Agregar el tercer Content Modifier
+### Paso 1 - Agregar el tercer Content Modifier
 
 1. Mantener los dos Content Modifiers del laboratorio 05.1.
 2. Agregar después de `Build Response` un tercer Content Modifier llamado `Replace Message Body`.
@@ -183,11 +183,11 @@ En **Exchange Property**:
 
 **Por qué:** aislar el efecto de reemplazar el Body y comprobar si los valores anteriores siguen disponibles.
 
-**Evidencia — Reemplazo del Body configurado**
+**Evidencia - Reemplazo del Body configurado**
 
 ![Figura 05-10. Content Modifier Replace Message Body configurado para generar un nuevo JSON sin redefinir header ni property.](./images/tema-05/05-10-replace-message-body.png)
 
-### Paso 2 — Desplegar y comprobar
+### Paso 2 - Desplegar y comprobar
 
 1. Guardar y volver a desplegar el mismo iFlow.
 2. Verificar **Started**.
@@ -206,11 +206,11 @@ En **Exchange Property**:
 }
 ```
 
-**Evidencia — Respuesta HTTP después del reemplazo**
+**Evidencia - Respuesta HTTP después del reemplazo**
 
 ![Figura 05-11. Respuesta 200 OK del laboratorio 05.2: Body nuevo con los valores originales del header y la property.](./images/tema-05/05-11-replace-body-http-response.png)
 
-**Evidencia — Monitorización de la segunda ejecución**
+**Evidencia - Monitorización de la segunda ejecución**
 
 ![Figura 05-12. Mensaje del laboratorio 05.2 registrado como Completed en Monitor Message Processing.](./images/tema-05/05-12-replace-body-monitoring.png)
 
@@ -225,7 +225,7 @@ En **Exchange Property**:
 | Property `idProceso` | Valor conservado |
 | Monitorización | Completed |
 
-## Laboratorio 05.3 — Protección CSRF en HTTPS Sender
+## Laboratorio 05.3 - Protección CSRF en HTTPS Sender
 
 **Estado:** ✅ Completado
 
@@ -239,7 +239,7 @@ Habilitar la protección CSRF en el HTTPS Sender y comprobar el rechazo de una s
 - Colección Postman con solicitudes autenticadas mediante Bearer Token y variable `{{access_token}}`.
 - No registrar tokens, cookies de sesión ni credenciales reales en Git.
 
-### Paso 1 — Habilitar CSRF Protected
+### Paso 1 - Habilitar CSRF Protected
 
 1. Abrir el iFlow `Message Headers Properties Lab`.
 2. Seleccionar el adaptador HTTPS Sender y abrir **Connection**.
@@ -249,11 +249,11 @@ Habilitar la protección CSRF en el HTTPS Sender y comprobar el rechazo de una s
 
 **Por qué:** se modifica únicamente la protección CSRF para comparar las solicitudes antes y después de habilitarla.
 
-**Evidencia — HTTPS Sender con CSRF habilitado**
+**Evidencia - HTTPS Sender con CSRF habilitado**
 
 ![Figura 05-13. Adaptador HTTPS Sender con CSRF Protected activado y dirección /lab05/message.](./images/tema-05/05-13-https-sender-csrf-enabled.png)
 
-### Paso 2 — Prueba negativa: POST sin token
+### Paso 2 - Prueba negativa: POST sin token
 
 1. Duplicar la solicitud HTTP de prueba en Postman.
 2. Configurar método **POST**, misma URL y autenticación Bearer.
@@ -269,11 +269,11 @@ Habilitar la protección CSRF en el HTTPS Sender y comprobar el rechazo de una s
 
 **Resultado observado:** `HTTP 403 Forbidden`, con una respuesta HTML. Es consistente con el rechazo esperado al habilitar CSRF, aunque la respuesta capturada no especificó expresamente la causa. No atribuir el 403 exclusivamente a CSRF sin considerar el conjunto de pruebas.
 
-**Evidencia — POST sin token rechazado**
+**Evidencia - POST sin token rechazado**
 
 ![Figura 05-14. Solicitud POST sin X-CSRF-Token que recibe HTTP 403 Forbidden.](./images/tema-05/05-14-csrf-post-without-token.png)
 
-### Paso 3 — Solicitar token CSRF
+### Paso 3 - Solicitar token CSRF
 
 1. Crear o duplicar una solicitud Postman llamada `Fetch CSRF Token`.
 2. Configurar **GET**, la misma URL y autenticación Bearer.
@@ -285,11 +285,11 @@ Habilitar la protección CSRF en el HTTPS Sender y comprobar el rechazo de una s
 
 **Resultado comunicado:** se recibió un token CSRF en la respuesta.
 
-**Evidencia — Obtención del token**
+**Evidencia - Obtención del token**
 
 ![Figura 05-15. GET con X-CSRF-Token: Fetch y presencia del header X-CSRF-Token en la respuesta; valor redactado.](./images/tema-05/05-15-csrf-fetch-token.png)
 
-### Paso 4 — Guardar el token automáticamente en Postman
+### Paso 4 - Guardar el token automáticamente en Postman
 
 En `Fetch CSRF Token`, abrir **Scripts → Post-response** y configurar:
 
@@ -307,11 +307,11 @@ if (pm.response.code === 200 && csrfToken) {
 
 **Por qué:** la variable de colección permite reutilizar el token sin copiarlo manualmente. Este script no ejecuta por sí solo el POST; ambas solicitudes se ejecutaron por separado.
 
-**Evidencia — Script Post-response**
+**Evidencia - Script Post-response**
 
 ![Figura 05-17. Script Post-response que extrae X-CSRF-Token y lo almacena en csrf_token, sin mostrar valores sensibles.](./images/tema-05/05-17-csrf-post-response-script.png)
 
-### Paso 5 — Reutilizar el token en POST
+### Paso 5 - Reutilizar el token en POST
 
 1. Abrir la solicitud POST `Message Headers Properties Test With CSRF`.
 2. Mantener la autenticación Bearer y el Body de la prueba negativa.
@@ -322,15 +322,15 @@ if (pm.response.code === 200 && csrfToken) {
 
 **Por qué:** se enlaza la respuesta del GET con el header de la solicitud POST mediante una variable de colección.
 
-**Evidencia — POST con variable de colección**
+**Evidencia - POST con variable de colección**
 
 ![Figura 05-18. Solicitud POST que referencia {{csrf_token}} en el header X-CSRF-Token y obtiene una respuesta exitosa, con secretos ocultos.](./images/tema-05/05-18-csrf-post-collection-variable.png)
 
-**Evidencia — POST con token aceptado**
+**Evidencia - POST con token aceptado**
 
 ![Figura 05-16. Respuesta exitosa del POST autenticado con token CSRF y JSON generado por el iFlow, con token redactado.](./images/tema-05/05-16-csrf-post-with-token.png)
 
-### Paso 6 — Ejecutar la secuencia mediante Collection Runner
+### Paso 6 - Ejecutar la secuencia mediante Collection Runner
 
 1. Crear la carpeta `Lab 05.3 - CSRF Automated Flow` dentro de la colección `CPI Learning Lab`.
 2. Duplicar las solicitudes originales para conservar las pruebas individuales.
@@ -340,17 +340,17 @@ if (pm.response.code === 200 && csrfToken) {
 
 **Por qué:** la ejecución secuencial elimina la necesidad de lanzar manualmente cada solicitud y permite comprobar el encadenamiento de autenticación OAuth, obtención de token CSRF y llamada al iFlow.
 
-**Evidencia — Configuración de Collection Runner**
+**Evidencia - Configuración de Collection Runner**
 
 ![Figura 05-19. Carpeta del laboratorio con las solicitudes ordenadas para obtener OAuth, solicitar CSRF y ejecutar el POST protegido.](./images/tema-05/05-19-csrf-collection-runner-config.png)
 
 **Resultado observado:** las tres solicitudes devolvieron `HTTP 200`; el Runner mostró **1 prueba aprobada, 0 fallidas y 0 errores**. La única aserción definida entonces comprobaba la recepción del token CSRF. La respuesta final contenía el JSON esperado del laboratorio 05.2.
 
-**Evidencia — Primera ejecución automatizada**
+**Evidencia - Primera ejecución automatizada**
 
 ![Figura 05-20. Collection Runner con tres solicitudes HTTP 200, una aserción aprobada y ningún error.](./images/tema-05/05-20-csrf-collection-runner-results.png)
 
-### Paso 7 — Incorporar aserciones del POST protegido
+### Paso 7 - Incorporar aserciones del POST protegido
 
 En la solicitud `Message Headers Properties Test With CSRF` de la carpeta automatizada, abrir **Scripts → Post-response** y configurar:
 
@@ -377,7 +377,7 @@ pm.test("Body contiene los valores esperados", function () {
 
 **Ejecución observada antes de la corrección:** el Runner mostró `PASS` para la recepción del token CSRF, el estado HTTP 200 y el contenido del Body; la prueba de `Content-Type` falló por la forma en que estaba escrita la aserción original. Se proporcionó el script corregido mostrado arriba. **No consta aún una nueva ejecución confirmada con cuatro aserciones aprobadas.**
 
-**Evidencia — Aserciones automáticas**
+**Evidencia - Aserciones automáticas**
 
 ![Figura 05-21. Validación del POST protegido en Collection Runner; documentar la ejecución definitiva con el script corregido cuando se confirme el resultado.](./images/tema-05/05-21-csrf-automated-assertions.png)
 
@@ -419,8 +419,8 @@ No se comunicaron errores durante los laboratorios 05.1 y 05.2. En 05.3 se obser
 
 ## Referencias
 
-- [SAP Help Portal — Cloud Integration](https://help.sap.com/docs/cloud-integration/sap-cloud-integration)
-- [SAP Help Portal — Integration Suite](https://help.sap.com/docs/integration-suite)
+- [SAP Help Portal - Cloud Integration](https://help.sap.com/docs/cloud-integration/sap-cloud-integration)
+- [SAP Help Portal - Integration Suite](https://help.sap.com/docs/integration-suite)
 
 ## Historial de cambios
 

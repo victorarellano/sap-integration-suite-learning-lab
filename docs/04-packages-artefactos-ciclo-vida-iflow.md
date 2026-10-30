@@ -2,7 +2,7 @@
 
 **Estado:** ✅ Completado
 **Fecha de validación:** 2026-10-09
-**Entorno:** SAP Integration Suite — Cloud Integration (Trial)
+**Entorno:** SAP Integration Suite - Cloud Integration (Trial)
 
 ## Objetivo
 
@@ -28,7 +28,7 @@ Comprender la relación entre Integration Package, Integration Flow (iFlow), Des
 
 ## Laboratorio paso a paso
 
-### 04.1 — Identificar package y artefacto
+### 04.1 - Identificar package y artefacto
 
 1. Abrir **Design → Integrations and APIs**.
 2. Localizar el package `CPI Learning Lab` y comprobar su versión `1.0.0` y modo `Editable`.
@@ -39,7 +39,7 @@ Comprender la relación entre Integration Package, Integration Flow (iFlow), Des
 
 **Resultado observado:** package e iFlow identificados; iFlow inicialmente mostrado como `Draft`, con despliegue `Deployed` y runtime `Started`.
 
-#### Evidencia 04.1 — Identificación del package y del iFlow
+#### Evidencia 04.1 - Identificación del package y del iFlow
 
 **1. Package identificado.** En Design se observa `CPI Learning Lab`, versión `1.0.0`, en modo `Editable`.
 
@@ -57,7 +57,7 @@ Comprender la relación entre Integration Package, Integration Flow (iFlow), Des
 
 ![Diseño del iFlow Runtime Test y estado del runtime](./images/tema-04/04-01-iflow.png)
 
-### 04.2 — Comprobar Design-time frente a Runtime
+### 04.2 - Comprobar Design-time frente a Runtime
 
 1. Abrir `Runtime Test` y seleccionar **Edit**.
 2. Seleccionar el Content Modifier `Set Hello World Response` → **Message Body**. Su tipo es `Constant`.
@@ -84,7 +84,7 @@ Comprender la relación entre Integration Package, Integration Flow (iFlow), Des
 
 **Resultado observado:** después de Save, respuesta original; después de Deploy, Postman mostró `200 OK` y el JSON actualizado con `design-v2`.
 
-#### Evidencia 04.2 — Antes y después del despliegue
+#### Evidencia 04.2 - Antes y después del despliegue
 
 **1. Antes de modificar: cuerpo original.** El Content Modifier `Set Hello World Response` utiliza `Type = Constant` y contiene el mensaje `Hello World from SAP Cloud Integration`.
 
@@ -98,7 +98,7 @@ Comprender la relación entre Integration Package, Integration Flow (iFlow), Des
 
 ![Respuesta HTTP 200 OK con el cuerpo actualizado después del despliegue](./images/tema-04/04-02-postman-despues.png)
 
-### 04.3 — Crear una versión sin redesplegar
+### 04.3 - Crear una versión sin redesplegar
 
 1. En el editor del iFlow, seleccionar **Save as Version**.
 2. Registrar la versión `1.0.1` y el comentario: `Lab 04 - Validated HTTP response change and design-time vs runtime deployment behavior.`
@@ -111,7 +111,7 @@ Comprender la relación entre Integration Package, Integration Flow (iFlow), Des
 
 **Resultado observado:** el historial mostró `1.0.1` como **Active Version** (creada el 09/10/2026) y `1.0.0` como versión anterior (creada el 02/10/2026) con opción **Revert**. **No se ejecutó Revert.**
 
-#### Evidencia 04.3 — Versión de diseño frente a versión desplegada
+#### Evidencia 04.3 - Versión de diseño frente a versión desplegada
 
 **1. Registro de nueva versión.** En `Save as Version` se propuso `1.0.1` para guardar una versión identificable del diseño, sin realizar otro despliegue.
 
@@ -158,8 +158,8 @@ No se reportaron errores técnicos durante este laboratorio. La diferencia entre
 ## Referencias
 
 - [Repositorio SAP Integration Suite Learning Lab](https://github.com/victorarellano/sap-integration-suite-learning-lab)
-- SAP Help Portal — SAP Cloud Integration: https://help.sap.com/docs/integration-suite/sap-integration-suite
+- SAP Help Portal - SAP Cloud Integration: https://help.sap.com/docs/integration-suite/sap-integration-suite
 
 ## Estado final
 
-**✅ Completado en la práctica** — laboratorios 04.1, 04.2 y 04.3 validados en la conversación el 09/10/2026.
+**✅ Completado en la práctica** - laboratorios 04.1, 04.2 y 04.3 validados en la conversación el 09/10/2026.
