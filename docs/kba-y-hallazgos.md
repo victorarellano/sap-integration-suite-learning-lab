@@ -492,3 +492,17 @@ Se cerró correctamente la llamada `parse(...)` y se ejecutaron nuevamente las p
 En esta ejecución, el editor no señaló un error sintáctico que luego fue identificado durante la compilación del script en tiempo de procesamiento. **El estado `Started` no garantiza que todos los scripts Groovy puedan ejecutarse sin errores de compilación.** Ante un HTTP inesperado, consultar el MPL y revisar también la instrucción anterior a la línea indicada por el compilador.
 
 El hallazgo describe exclusivamente el comportamiento observado en este laboratorio; no demuestra que el editor de SAP Cloud Integration omita sistemáticamente estas validaciones.
+
+### Where-Used no mostró una referencia existente de User Credentials (capítulo 15)
+
+**Contexto:** iFlow `LAB15_03_Basic_Authentication`, HTTP Receiver con `Authentication = Basic` y `Credential Name = BASIC_LAB15_HTTPBIN`.
+
+**Síntoma:** `Where-Used` de `BASIC_LAB15_HTTPBIN` mostró `Artifacts (0)` / `No references found`.
+
+**Evidencia de contraste:** el HTTP Receiver referenciaba el alias (15-23) y una ejecución con credenciales correctas devolvió HTTP 200 desde HTTPBin (15-25). En otro material, `OAUTH2_Consulta_Clientes`, Where-Used sí mostró una referencia (15-04).
+
+**Diagnóstico:** discrepancia observada entre la vista de dependencias y el uso comprobado. No se determinó su causa; no atribuirla a SAP ni asumir que Where-Used excluye sistemáticamente referencias de Basic Authentication.
+
+**Precaución:** no utilizar Where-Used como única verificación antes de cambiar o eliminar materiales. Revisar también los iFlows consumidores conocidos y su configuración.
+
+**Estado:** causa pendiente de confirmar.

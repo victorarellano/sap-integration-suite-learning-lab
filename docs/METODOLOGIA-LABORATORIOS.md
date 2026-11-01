@@ -208,3 +208,12 @@ Antes de ofrecer los archivos descargables, comprobar:
 6. Que se distingue lo efectivamente validado de lo pendiente y que no se incluyen secretos.
 
 **Regla de continuidad:** al comenzar una nueva conversación, aplicar este procedimiento aunque el asistente disponga de herramientas con capacidad de escritura en GitHub.
+
+### 13.5. Consolidación periódica durante un capítulo
+
+- Consolidar la documentación **cada dos laboratorios abordados**, sin esperar a finalizar el capítulo.
+- En cada corte, consultar la versión vigente del Markdown del capítulo en GitHub y entregar una versión consolidada que conserve los laboratorios y evidencias anteriores.
+- Actualizar en el mismo corte el fragmento correspondiente de `README.md` y las incorporaciones pertinentes a `docs/kba-y-hallazgos.md`.
+- Diferenciar laboratorios completados con evidencia práctica (`✅ Completado`) de temas solo analizados (`🟦 Revisado`) o todavía en curso (`🟨 En curso`).
+- Evitar pruebas, capturas y repeticiones que no aporten evidencia nueva.
+- El usuario revisa y publica los archivos en GitHub; el asistente no realiza commits salvo autorización expresa.
