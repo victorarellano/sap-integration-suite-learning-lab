@@ -506,3 +506,93 @@ El hallazgo describe exclusivamente el comportamiento observado en este laborato
 **Precaución:** no utilizar Where-Used como única verificación antes de cambiar o eliminar materiales. Revisar también los iFlows consumidores conocidos y su configuración.
 
 **Estado:** causa pendiente de confirmar.
+
+## KBA — Error HTTP 404 por configuración incorrecta de Token Service URL en OAuth2 Client Credentials
+
+**Componente:** SAP Integration Suite — Cloud Integration
+**Ámbito:** HTTP Receiver Adapter / OAuth2 Client Credentials / Security Material
+**Laboratorio relacionado:** Tema 15 — Seguridad
+**Estado:** Resuelto y validado
+
+### 1. Síntoma
+
+Durante la ejecución del iFlow `Request Reply`, que consume el endpoint de otro iFlow (`Consulta Clientes`) mediante un HTTP Receiver configurado con OAuth2 Client Credentials, el procesamiento finalizaba con error.
+
+En el monitor de mensajes se observaba:
+
+```text
+Status code: 404
+Reason: 404 Not Found
+Requested route (...) does not exist.
+```
+
+El iFlow receptor `Consulta Clientes` estaba desplegado y en estado `Started`. Su endpoint respondía correctamente cuando se invocaba directamente desde Postman con autenticación válida.
+
+La prueba de conectividad TLS al host del runtime también resultaba satisfactoria.
+
+### 2. Causa identificada
+
+El Security Material `OAUTH2_Consulta_Clientes`, de tipo **OAuth2 Client Credentials**, tenía configurado incorrectamente el campo `Token Service URL`.
+
+Se había copiado el valor de `oauth.url` de la Service Key de SAP BTP, en lugar del valor de `oauth.tokenurl`.
+
+Ambos campos tienen propósitos diferentes:
+
+| Campo de Service Key | Propósito |
+|---|---|
+| `oauth.url` | URL base del servicio de integración |
+| `oauth.tokenurl` | Endpoint del servicio de autorización para obtener tokens OAuth2 |
+
+La configuración incorrecta hacía que la solicitud de obtención del token utilizara una dirección que no correspondía al endpoint OAuth2.
+
+### 3. Solución aplicada
+
+1. Acceder a **Monitor → Security Material**.
+2. Editar el material `OAUTH2_Consulta_Clientes`.
+3. Localizar el campo `Token Service URL`.
+4. Sustituir el valor procedente de `oauth.url` por el valor completo de `oauth.tokenurl` obtenido de la Service Key correspondiente.
+5. Desplegar nuevamente el Security Material.
+6. Ejecutar la petición de prueba desde Postman.
+
+No fue necesario modificar el Client ID ni el Client Secret para resolver esta incidencia.
+
+### 4. Validación
+
+Tras corregir `Token Service URL`, la petición POST al endpoint `/http/lab08/request-reply` se ejecutó correctamente.
+
+La respuesta obtenida fue:
+
+```xml
+<SolicitudEnriquecida>
+    <solicitudId>SOL-1001</solicitudId>
+    <clienteId>1001</clienteId>
+    <origen>POSTMAN</origen>
+    <cliente>
+        <nombre>Ana</nombre>
+        <segmento>PREMIUM</segmento>
+    </cliente>
+</SolicitudEnriquecida>
+```
+
+Se confirmó el funcionamiento del flujo de integración, incluida la consulta autenticada al servicio receptor y el enriquecimiento de la solicitud.
+
+### 5. Aprendizajes reutilizables
+
+- No confundir `oauth.url` con `oauth.tokenurl` al utilizar las credenciales de una Service Key.
+- Para configurar `Token Service URL`, utilizar el valor exacto de `oauth.tokenurl`.
+- Una prueba TLS satisfactoria verifica conectividad y aspectos del certificado, pero no valida la configuración OAuth2.
+- Ante errores de un HTTP Receiver con OAuth2 Client Credentials, revisar tanto la dirección del receptor como la configuración del servicio de obtención del token.
+- Un error HTTP 404 no demuestra por sí solo que el endpoint del iFlow receptor esté mal configurado; es necesario identificar qué solicitud está fallando.
+
+### 6. Alcance y limitaciones
+
+Este hallazgo fue validado en el escenario descrito, utilizando dos iFlows de SAP Cloud Integration y autenticación OAuth2 Client Credentials.
+
+No debe generalizarse que todos los errores HTTP 404 en este adaptador tienen la misma causa.
+
+### 7. Referencia de evidencia
+
+- Prueba funcional satisfactoria desde Postman después de corregir la URL OAuth2.
+- Archivo de evidencia: `15-29-postman-request-reply-oauth-corregido.png`.
+
+**Nota de seguridad:** no incorporar capturas de Service Keys con secretos visibles ni documentar valores reales de `clientsecret`.
