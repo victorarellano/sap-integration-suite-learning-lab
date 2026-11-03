@@ -1,13 +1,13 @@
 # 15 - Seguridad: OAuth, Basic, certificados y Security Material
 
-**Estado del tema:** 🟨 En curso
+**Estado del tema:** 🟦 Revisado
 **Package:** `CPI Learning Lab`
 **iFlows reutilizados:** `Request Reply` (`Request_Reply`) y `Consulta Clientes`
-**Fecha de las validaciones:** 30–31/10/2026
+**Fecha de las validaciones:** 30–31/10/2026 y 03/11/2026
 
 ## Objetivo
 
-Comprender y validar los mecanismos de autenticación y autorización de entrada y salida en SAP Cloud Integration, la administración de credenciales mediante Security Material Basic Authentication y la administración de Security Material; los certificados y mecanismos de confianza se abordarán posteriormente.
+Comprender los mecanismos de autenticación y autorización de entrada y salida en SAP Cloud Integration, administrar credenciales mediante Security Material y distinguir la validación de TLS de la autorización HTTP. Las pruebas prácticas y sus límites se documentan por laboratorio.
 
 ## Conceptos
 
@@ -466,7 +466,7 @@ Crear una identidad criptográfica de laboratorio en el Keystore y comprobar la 
 
 **Evidencia 15-38 — TLS Connectivity con alias cliente.** Conexión exitosa y alias de certificado cliente informado.
 
-![Evidencia 15-38 — Test Connectivity mTLS](images/tema-15/15-38-test-connectivity-certificado-cliente.png)
+![Evidencia 15-38 — Test Connectivity mTLS](images/tema-15/15-38-test-connectivity-mtls-certauth.png)
 
 6. Como contraste, se observó que la prueba TLS de SAP hacia el mismo host también informó éxito **sin** seleccionar autenticación de certificado cliente. En navegador, el sitio solicitó elegir un certificado y, al cancelar, respondió `Error: No TLS client certificate presented`. **Motivo:** distinguir éxito de conexión TLS de aceptación HTTP por la aplicación. Reiniciar el navegador no permite inferir el estado de sesiones TLS del runtime CPI. No se solicitaron capturas adicionales ni se creó un iFlow solo para comprobar rechazo.
 
@@ -499,9 +499,56 @@ Un servidor puede permitir completar una conexión TLS sin certificado cliente y
 
 Los mecanismos inbound y outbound se configuran por separado; Security Material y Keystore gestionan tipos de credenciales diferentes; las pruebas positivas y negativas deben interpretarse según su capa técnica. Los certificados y secretos no deben publicarse en el repositorio.
 
-## Continuidad
+## 15.7 — Validación integral de seguridad
 
-15.5 y 15.6 quedan documentados con el alcance realmente observado. El capítulo permanece 🟨 En curso porque **15.7 — Validación integral** todavía está pendiente.
+**Estado:** 🟦 Revisado — síntesis y contraste de evidencias prácticas anteriores, sin ejecución independiente.
+
+### Objetivo
+
+Contrastar las validaciones de seguridad de los laboratorios 15.1 a 15.6, identificar sus límites y determinar si es necesaria una prueba adicional para interpretar correctamente los resultados.
+
+### Conceptos y prerrequisitos
+
+- Diferencia entre autenticación de entrada (HTTPS Sender) y de salida (HTTP Receiver).
+- Distinción entre autorización HTTP, conectividad TLS, certificado de servidor y certificado cliente.
+- Evidencias y resultados documentados en los laboratorios 15.1 a 15.6.
+
+### Laboratorio paso a paso
+
+1. **Contrastar la autenticación de entrada y salida.** Revisar la ejecución positiva del iFlow `LAB15_03_Basic_Authentication`: el HTTPS Sender recibió Bearer y el HTTP Receiver utilizó Basic mediante `BASIC_LAB15_HTTPBIN`. La evidencia **15-25** documenta HTTP 200 con `authenticated: true` y `authorized: true`. **Motivo:** una misma ejecución demuestra ambos mecanismos, sin repetir la petición.
+2. **Contrastar las pruebas negativas.** Revisar las evidencias **15-12 y 15-13** para solicitudes sin autorización válida, y **15-28 y 15-29** para Basic incorrecto. **Motivo:** diferenciar rechazo de entrada HTTP 401, rechazo del receptor HTTPBin 401 registrado en MPL y HTTP 500 recibido desde CPI.
+3. **Revisar la administración de credenciales.** Contrastar las referencias y ejecuciones de OAuth y Basic con la discrepancia observada en `Where-Used` (**15-26**). **Motivo:** no interpretar un inventario de referencias como prueba exhaustiva de ausencia de consumidores.
+4. **Revisar TLS y certificados.** Contrastar las evidencias **15-31 a 15-38**. **Motivo:** distinguir validación del certificado de servidor, existencia de Key Pair, conectividad TLS con alias de cliente y autorización HTTP mediante certificado.
+5. **Determinar el alcance final.** Registrar qué resultados están comprobados y cuáles no, sin crear nuevos iFlows, alterar credenciales, desplegar versiones ni duplicar capturas. **Motivo:** cerrar el análisis con trazabilidad y sin transformar inferencias en resultados experimentales.
+
+### Matriz integral de validación
+
+| Mecanismo o escenario | Evidencia existente | Resultado observado | Alcance y límite |
+|---|---|---|---|
+| OAuth inbound válido | 15-10, 15-11, 15-25 | Solicitudes autorizadas y HTTP 200 | Acceso positivo demostrado en escenarios probados |
+| OAuth inbound ausente o inválido | 15-12, 15-13 | HTTP 401 | No se probó un token válido sin el rol requerido |
+| Basic outbound correcto | 15-23 a 15-25 | HTTP 200; `authenticated=true`, `authorized=true` | Entrada Bearer y salida Basic validadas conjuntamente |
+| Basic outbound incorrecto | 15-27 a 15-29 | HTTPBin 401 en MPL; CPI 500 hacia Postman | Distingue error del destino y respuesta del flujo |
+| Security Material | 15-02, 15-04, 15-05, 15-22, 15-23, 15-26, 15-30 | Materiales desplegados y consumidos; `Where-Used` discrepante para Basic | Causa de la discrepancia no confirmada |
+| TLS y confianza del servidor | 15-31 a 15-34 | Conectividad TLS exitosa; certificado de servidor válido | No se identificó el anclaje exacto utilizado por el runtime |
+| Key Pair y certificado cliente | 15-35 a 15-38 | Key Pair creado; prueba TLS exitosa con alias informado en CertAuth | No demuestra autorización HTTP desde CPI mediante mTLS |
+
+### Resultado esperado y validación
+
+La matriz consolida las comprobaciones ya documentadas y sus límites. **No se realizó una nueva ejecución ni se generaron nuevas capturas en 15.7.** El estado de este apartado es `🟦 Revisado`, porque su resultado es un análisis de evidencia práctica anterior, no un laboratorio independiente validado.
+
+### Problemas encontrados y aprendizajes
+
+- No equiparar una respuesta HTTP 500 de CPI con el HTTP 401 del servicio externo sin revisar el MPL.
+- No deducir que el certificado cliente fue aceptado por la aplicación a partir de una prueba de conectividad TLS.
+- Evitar repetir pruebas o capturas cuando las evidencias existentes permiten responder la pregunta técnica.
+- Conservar como limitaciones explícitas las comprobaciones que no se realizaron.
+
+---
+
+## Cierre del capítulo
+
+**Estado del capítulo: 🟦 Revisado.** Los laboratorios 15.1, 15.2, 15.3, 15.5 y 15.6 disponen de validaciones prácticas dentro de los alcances indicados; 15.4 y 15.7 son revisiones analíticas de evidencias existentes. El capítulo queda cerrado para continuidad del curso, sin declarar completadas pruebas no ejecutadas. La autorización HTTP mediante certificado cliente y el uso exacto del anclaje de confianza permanecen fuera del alcance comprobado.
 
 ## Referencias
 
