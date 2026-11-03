@@ -369,37 +369,146 @@ La revisión permitió contrastar referencias y resultados previamente demostrad
 
 ---
 
+## 15.5 — Certificados, Keystore y TLS
+
+**Estado:** ✅ Completado
+
+### Objetivo
+
+Reconocer el inventario de certificados del Keystore y validar conectividad TLS con comprobación del certificado del servidor, distinguiendo certificados de confianza y pares de claves de identidad.
+
+### Laboratorio paso a paso
+
+1. Abrir **Monitor → Manage Security → Keystore**. Se observaron **13 entradas de tipo Certificate** y ninguna de tipo Key Pair antes de 15.6. **Motivo:** distinguir material de confianza del material que permite autenticación del cliente.
+
+   **Evidencia 15-31 — Inventario inicial del Keystore.** Vista del inventario anterior a la creación del par de claves.
+
+2. Inspeccionar la cadena presentada por `httpbin.org:443`. Se observaron las relaciones de sujeto/emisor:
+
+   | Certificado (Subject DN) | Emisor (Issuer DN) |
+   |---|---|
+   | `CN=httpbin.hbin.postmanlabs.com` | `CN=YE1,O=Let's Encrypt,C=US` |
+   | `CN=YE1,O=Let's Encrypt,C=US` | `CN=Root YE,O=ISRG,C=US` |
+   | `CN=Root YE,O=ISRG,C=US` | `CN=ISRG Root X2,O=Internet Security Research Group,C=US` |
+   | `CN=ISRG Root X2,O=Internet Security Research Group,C=US` | `CN=ISRG Root X1,O=Internet Security Research Group,C=US` |
+
+   El certificado de servidor incluía `httpbin.org` en SAN. **Motivo:** comprender cómo se relacionan los certificados por emisor y sujeto, sin confundir coincidencia de nombres con validación criptográfica.
+
+   **Evidencia 15-32 — Cadena de certificados del servidor.** Sujetos, emisores y nombre del servicio inspeccionados.
+
+3. Consultar la entrada `sap_isrg_root_x1` del Keystore. Su Subject DN coincidía con el Issuer DN del certificado `ISRG Root X2`. **Motivo:** ilustrar un posible anclaje de confianza. La coincidencia de DN **no prueba** que esa entrada concreta haya sido utilizada por el runtime ni demuestra por sí sola la verificación de firmas.
+
+   **Evidencia 15-33 — Certificado de confianza en Keystore.** Identificación de la entrada y su Subject DN.
+
+4. Abrir **Connectivity Tests → TLS**, host `httpbin.org`, puerto `443`, activar `Valid Server Certificate Required` y mantener desactivado `Authenticate with Client Certificate`. Ejecutar la prueba. SAP informó conexión exitosa y certificado de servidor válido. **Motivo:** verificar conectividad TLS con validación del certificado del servidor.
+
+   **Evidencia 15-34 — TLS Test Connectivity exitoso.** Conexión a `httpbin.org:443` y validación de certificado del servidor.
+
+### Diagrama conceptual del handshake y la confianza
+
+```mermaid
+flowchart TD
+    A["CPI inicia conexión TLS a httpbin.org:443"] --> B["Servidor presenta certificado y cadena X.509"]
+    B --> C["Comprobar nombre de host mediante SAN"]
+    C --> D["Comprobar vigencia temporal"]
+    D --> E["Verificar firmas y encadenamiento criptográfico"]
+    E --> F["Buscar anclaje de confianza admitido"]
+    F --> G{"¿Validaciones correctas?"}
+    G -->|Sí| H["Completar autenticación del servidor y establecer canal TLS"]
+    G -->|No| I["Rechazar conexión validada"]
+    J["Clave privada del servidor"] -. "Prueba criptográfica de posesión durante el handshake" .-> H
+    K["Keystore: sap_isrg_root_x1"] -. "DN compatible observado; uso efectivo no demostrado" .-> F
+```
+
+**Nota:** diagrama conceptual, no una traza interna del runtime SAP. La verificación exacta depende de la negociación TLS y la cadena de confianza efectiva.
+
+### Resultado esperado y validación
+
+La prueba de SAP confirmó conectividad a `httpbin.org:443` con certificado de servidor válido. Se inspeccionaron certificados y coincidencia de DN. No se comprobó qué entrada exacta del truststore utilizó el runtime.
+
+### Problemas y aprendizajes
+
+La coincidencia de Subject/Issuer DN sirve para explorar la cadena, pero no reemplaza la validación de firmas ni permite identificar con certeza el anclaje realmente utilizado.
+
+---
+
+## 15.6 — Autenticación mediante certificados (mTLS)
+
+**Estado:** ✅ Completado, limitado a creación de identidad cliente y prueba TLS de conectividad
+
+### Objetivo
+
+Crear una identidad criptográfica de laboratorio en el Keystore y comprobar la conexión TLS de CPI con una opción de certificado cliente, sin modificar iFlows.
+
+### Laboratorio paso a paso
+
+1. En **Monitor → Manage Security → Keystore → Create → Key Pair**, inspeccionar el formulario. Se observaron Alias, RSA, tamaño 2048, SHA-512/RSA, campos de identidad y vigencia. **Motivo:** identificar los parámetros de una clave privada y su certificado asociado antes de crear el recurso.
+
+**Evidencia 15-35 — Formulario Create Key Pair.** Parámetros disponibles.
+
+![Evidencia 15-35 — Create Key Pair](images/tema-15/15-35-keystore-create-key-pair.png)
+
+2. Crear un par de claves exclusivamente para laboratorio con alias solicitado `LAB15_MTLS_CLIENT`, tipo RSA, 2048 bits, firma SHA-512/RSA, `CN=LAB15_MTLS_CLIENT`, `O=CPI Learning Lab`, `C=CL`, vigencia del 03/11/2026 al 03/11/2028. SAP mostró el alias como `lab15_mtls_client`. **Motivo:** disponer de identidad de cliente independiente del material de confianza del servidor.
+
+**Evidencia 15-36 — Key Pair creado.** Inventario de 14 entradas y alias `lab15_mtls_client`.
+
+![Evidencia 15-36 — Key Pair creado](images/tema-15/15-36-keystore-key-pair-creado.png)
+
+3. Inspeccionar el detalle: Key Pair, RSA 2048, `SHA512withRSA`, Subject e Issuer DN `CN=LAB15_MTLS_CLIENT,O=CPI Learning Lab,C=CL`, vigencia 2026–2028. **Motivo:** confirmar características de la identidad. La igualdad de DN es compatible con un certificado autofirmado, pero no demuestra por sí sola la firma criptográfica.
+
+**Evidencia 15-37 — Detalle del Key Pair.** Algoritmo, identidad y vigencia.
+
+![Evidencia 15-37 — Detalle Key Pair](images/tema-15/15-37-keystore-key-pair-detalle.png)
+
+4. En **Connectivity Tests → TLS**, probar `httpbin.org:443` con `Authenticate with Client Certificate` activo, alias `lab15_mtls_client`, `Valid Server Certificate Required` activo e `Include new SAP Key` desactivado. SAP informó: `Successfully reached host at httpbin.org:443 but client certificate was not used`. **Motivo:** comprobar que configurar un alias no implica que el servidor solicite o utilice el certificado. No se asignó una captura numerada adicional a esta prueba.
+
+5. Repetir la prueba TLS hacia `certauth.cryptomix.com:443` con el mismo alias y validación del servidor activa. SAP informó `Successfully reached host at certauth.cryptomix.com:443`, `Client Certificate Alias: lab15_mtls_client` y `Server Certificate: Valid`. **Motivo:** utilizar un destino compatible con la presentación de certificado cliente.
+
+**Evidencia 15-38 — TLS Connectivity con alias cliente.** Conexión exitosa y alias de certificado cliente informado.
+
+![Evidencia 15-38 — Test Connectivity mTLS](images/tema-15/15-38-test-connectivity-certificado-cliente.png)
+
+6. Como contraste, se observó que la prueba TLS de SAP hacia el mismo host también informó éxito **sin** seleccionar autenticación de certificado cliente. En navegador, el sitio solicitó elegir un certificado y, al cancelar, respondió `Error: No TLS client certificate presented`. **Motivo:** distinguir éxito de conexión TLS de aceptación HTTP por la aplicación. Reiniciar el navegador no permite inferir el estado de sesiones TLS del runtime CPI. No se solicitaron capturas adicionales ni se creó un iFlow solo para comprobar rechazo.
+
+### Resultado esperado y validación
+
+| Comprobación | Resultado observado | Alcance |
+|---|---|---|
+| Crear Key Pair | Alias `lab15_mtls_client`, RSA 2048, vigencia 2026–2028 | Configuración validada |
+| HTTPBin con alias | Conexión exitosa; certificado cliente no utilizado | No demuestra mTLS |
+| CertAuth con alias | Conexión exitosa, alias informado, certificado servidor válido | Uso reportado en TLS Test Connectivity |
+| CertAuth sin alias | Prueba TLS exitosa | No equivale a autorización HTTP |
+| Navegador sin certificado | Error HTTP de certificado ausente | Contraste externo, no ejecución CPI |
+| Autorización HTTP desde CPI mediante certificado | No probada | Fuera del alcance validado |
+
+### Problemas encontrados y aprendizajes
+
+Un servidor puede permitir completar una conexión TLS sin certificado cliente y exigir identidad después, a nivel de aplicación. La salida de Connectivity Tests no debe describirse como prueba de autorización HTTP. El certificado de laboratorio no debe confundirse con una identidad emitida por una CA corporativa.
+
+---
+
 ## Problemas encontrados y hallazgos
 
-- **Correlación entre iFlows no validada:** se intentó buscar por Correlation ID las ejecuciones `Request Reply` y `Consulta Clientes`, pero no se obtuvo una correlación conjunta verificable. No se atribuye causa ni se afirma propagación de identificadores. Se reserva para un escenario posterior de trazabilidad si corresponde.
-- **Alcance de autorización:** no se generó un token válido carente de `ESBMessaging.send`; por ello no se documenta una respuesta HTTP 403 como resultado de laboratorio.
-- **Rechazo sin MPL visible:** ante token inválido se obtuvo HTTP 401 y no apareció una nueva ejecución en el intervalo consultado. La observación puede reutilizarse como caso de diagnóstico, sin adjudicar la causa interna sin evidencia adicional.
+- **Where-Used:** `BASIC_LAB15_HTTPBIN` devolvió cero referencias pese al uso comprobado. Causa no determinada.
+- **OAuth:** no se probó token válido sin `ESBMessaging.send`. Un HTTP 401 sin MPL visible no permite identificar por sí solo la capa exacta de rechazo.
+- **Correlación:** no se verificó correlación conjunta entre los iFlows `Request Reply` y `Consulta Clientes`.
+- **TLS:** Subject/Issuer DN coincidentes no demuestran qué anclaje de confianza usó CPI.
+- **Certificado cliente:** la prueba TLS y la autorización HTTP son comprobaciones diferentes.
 
 ## Aprendizajes consolidados
 
-- El adaptador HTTPS Sender controla la autorización de entrada; el HTTP Receiver utiliza el material de seguridad para la salida.
-- Where-Used ayuda a explorar dependencias, pero la discrepancia observada en 15.3 impide tratarlo como comprobación exhaustiva.
-- Las pruebas positivas y negativas, los roles y el MPL permiten distinguir autenticación de entrada, autenticación de salida y errores del receptor.
-- La documentación de seguridad debe excluir secretos y evitar duplicar evidencias.
+Los mecanismos inbound y outbound se configuran por separado; Security Material y Keystore gestionan tipos de credenciales diferentes; las pruebas positivas y negativas deben interpretarse según su capa técnica. Los certificados y secretos no deben publicarse en el repositorio.
 
-## Continuidad del capítulo
+## Continuidad
 
-**15.1, 15.2 y 15.3 están completados dentro del alcance validado; 15.4 está revisado sin laboratorio independiente.** El capítulo continúa **🟨 En curso**.
-
-| Laboratorio | Estado | Alcance |
-|---|---|---|
-| 15.1 Arquitectura de seguridad | ✅ Completado | Evidencias 15-01 a 15-07 |
-| 15.2 OAuth 2.0 Client Credentials | ✅ Completado | Evidencias 15-08 a 15-13 |
-| 15.3 Basic Authentication | ✅ Completado | Evidencias 15-14 a 15-30 |
-| 15.4 Security Material | 🟦 Revisado | Dependencias revisadas con evidencias previas; sin práctica independiente |
-| 15.5 Certificados, Keystore y TLS | ⬜ Pendiente | Confianza y protección del transporte |
-| 15.6 Autenticación mediante certificados | ⬜ Pendiente | Escenario compatible con el entorno disponible |
-| 15.7 Validación integral | ⬜ Pendiente | Comparación y diagnóstico de mecanismos |
+15.5 y 15.6 quedan documentados con el alcance realmente observado. El capítulo permanece 🟨 En curso porque **15.7 — Validación integral** todavía está pendiente.
 
 ## Referencias
 
 - [SAP Help Portal — Cloud Integration](https://help.sap.com/docs/cloud-integration)
-- [RFC 6749 — OAuth 2.0 Authorization Framework](https://www.rfc-editor.org/rfc/rfc6749)
-- [RFC 6750 — OAuth 2.0 Bearer Token Usage](https://www.rfc-editor.org/rfc/rfc6750)
+- [RFC 6749 — OAuth 2.0](https://www.rfc-editor.org/rfc/rfc6749)
+- [RFC 6750 — Bearer Token Usage](https://www.rfc-editor.org/rfc/rfc6750)
+- [RFC 5280 — X.509 PKI](https://www.rfc-editor.org/rfc/rfc5280)
+- [RFC 8446 — TLS 1.3](https://www.rfc-editor.org/rfc/rfc8446)
 
-> **Seguridad documental:** las referencias de imágenes indican las rutas previstas en el repositorio. Su incorporación física debe verificarse al publicar; no se afirma que ya estén subidas.
+**Control de evidencias:** las capturas 15-31 a 15-34 están identificadas por número y contenido, pero sus nombres exactos no pudieron verificarse en el contexto disponible. No se inventaron rutas para ellas. Las referencias de imágenes restantes preservan los nombres del documento publicado o los acordados durante el laboratorio. No se afirma que las nuevas imágenes ya estén subidas a GitHub.

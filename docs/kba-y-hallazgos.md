@@ -596,3 +596,16 @@ No debe generalizarse que todos los errores HTTP 404 en este adaptador tienen la
 - Archivo de evidencia: `15-29-postman-request-reply-oauth-corregido.png`.
 
 **Nota de seguridad:** no incorporar capturas de Service Keys con secretos visibles ni documentar valores reales de `clientsecret`.
+
+
+## KBA — Alcance de Connectivity Tests TLS y certificado de cliente (15.5–15.6)
+
+**Síntoma:** la prueba TLS a `httpbin.org:443` con alias `lab15_mtls_client` informó `client certificate was not used`. En `certauth.cryptomix.com:443`, la prueba con alias informó conexión exitosa y `Client Certificate Alias: lab15_mtls_client`; la prueba TLS sin alias también tuvo éxito. Un navegador sin certificado recibió `No TLS client certificate presented`.
+
+**Diagnóstico:** las pruebas observadas no son equivalentes. La conectividad TLS puede resultar satisfactoria sin demostrar autorización HTTP de la aplicación. La selección de alias tampoco garantiza que todos los destinos soliciten certificado cliente. No se confirmó un problema de caché ni de sesiones del runtime.
+
+**Criterio de validación:** seleccionar un destino compatible, activar `Authenticate with Client Certificate`, elegir el Key Pair y comprobar la salida de Connectivity Tests. Para demostrar autorización HTTP se necesitaría una prueba HTTP específica, no realizada en este laboratorio.
+
+**Alcance:** configuración del Key Pair y conectividad TLS con alias informado; no autorización HTTP de CPI mediante mTLS. No generalizar a otros destinos.
+
+**Evidencias:** 15-35 a 15-38 del capítulo 15.
