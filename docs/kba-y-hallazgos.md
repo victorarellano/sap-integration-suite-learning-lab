@@ -609,3 +609,30 @@ No debe generalizarse que todos los errores HTTP 404 en este adaptador tienen la
 **Alcance:** configuración del Key Pair y conectividad TLS con alias informado; no autorización HTTP de CPI mediante mTLS. No generalizar a otros destinos.
 
 **Evidencias:** 15-35 a 15-38 del capítulo 15.
+
+## KBA-LAB-016 — Diferencia entre nombre y valor predeterminado al externalizar HTTPS Sender
+
+**Origen:** capítulo 16, laboratorio 16.4.
+**Artefacto:** `LAB16-Externalized Parameters`.
+**Estado:** configuración corregida y endpoint validado mediante Postman.
+
+### Síntoma y contexto
+
+Al externalizar **HTTPS Sender → Connection → Address**, la interfaz mostró un campo para el identificador `{{P_HTTP_ADDRESS}}` y otro para el valor predeterminado. Durante la edición se observó una combinación de dirección base y sufijo no deseado en la vista Configure.
+
+### Diagnóstico
+
+Las capturas mostraron que el nombre del parámetro y su valor predeterminado son entradas distintas. El valor deseado del endpoint inicial era `/lab16/parameters`; no debía agregarse un sufijo adicional al predeterminado.
+
+### Corrección
+
+Se conservó el identificador `P_HTTP_ADDRESS` y se estableció el valor predeterminado `/lab16/parameters`. En Configure se verificó la dirección completa y posteriormente se modificó el valor a `/lab16/parameters-v2`.
+
+### Validación
+
+La petición GET a `/http/lab16/parameters-v2` devolvió HTTP `200 OK` y el JSON esperado con `"ambiente": "PRD"`.
+
+### Alcance y aprendizaje
+
+En este laboratorio, la distinción entre **identificador** y **valor** fue esencial para evitar una dirección publicada incorrecta. No se atribuye el comportamiento a un defecto de SAP ni se generaliza a otros adaptadores sin pruebas.
+
