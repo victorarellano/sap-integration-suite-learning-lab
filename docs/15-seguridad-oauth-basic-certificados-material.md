@@ -1,6 +1,6 @@
 # 15 - Seguridad: OAuth, Basic, certificados y Security Material
 
-**Estado del tema:** 🟦 Revisado
+**Estado del tema:** ✅ `Completado`
 **Package:** `CPI Learning Lab`
 **iFlows reutilizados:** `Request Reply` (`Request_Reply`) y `Consulta Clientes`
 **Fecha de las validaciones:** 30–31/10/2026 y 03/11/2026
@@ -548,7 +548,7 @@ La matriz consolida las comprobaciones ya documentadas y sus límites. **No se r
 
 ## Cierre del capítulo
 
-**Estado del capítulo: 🟦 Revisado.** Los laboratorios 15.1, 15.2, 15.3, 15.5 y 15.6 disponen de validaciones prácticas dentro de los alcances indicados; 15.4 y 15.7 son revisiones analíticas de evidencias existentes. El capítulo queda cerrado para continuidad del curso, sin declarar completadas pruebas no ejecutadas. La autorización HTTP mediante certificado cliente y el uso exacto del anclaje de confianza permanecen fuera del alcance comprobado.
+**Estado del capítulo: ✅ `Completado`.** Los laboratorios 15.1, 15.2, 15.3, 15.5 y 15.6 disponen de validaciones prácticas dentro de los alcances indicados; 15.4 y 15.7 son revisiones analíticas de evidencias existentes. El capítulo queda cerrado para continuidad del curso, sin declarar completadas pruebas no ejecutadas. La autorización HTTP mediante certificado cliente y el uso exacto del anclaje de confianza permanecen fuera del alcance comprobado.
 
 ## Referencias
 
