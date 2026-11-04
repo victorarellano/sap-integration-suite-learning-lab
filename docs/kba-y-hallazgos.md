@@ -636,3 +636,34 @@ La petición GET a `/http/lab16/parameters-v2` devolvió HTTP `200 OK` y el JSON
 
 En este laboratorio, la distinción entre **identificador** y **valor** fue esencial para evitar una dirección publicada incorrecta. No se atribuye el comportamiento a un defecto de SAP ni se generaliza a otros adaptadores sin pruebas.
 
+## KBA — Data Store: entrada existente no accesible desde un segundo iFlow con visibilidad Global
+
+**Origen:** Capítulo 17, laboratorio 17.2.
+**Estado:** Diagnóstico y alternativa de configuración validados (04/11/2026).
+
+### Síntomas
+
+- El iFlow lector `LAB17-Data Store Get`, con `Visibility = Global`, `Data Store Name = LAB17_ORDENES` y `Entry ID = ORD-17001`, devolvió HTTP 500.
+- El MPL informó: `No message found for id ORD-17001 in store LAB17_ORDENES.`
+- Monitor mostraba `ORD-17001` en el almacenamiento asociado a `LAB17-Data_Store`.
+- Una nueva escritura de `ORD-17001`, con sobrescritura desactivada, falló con `An entry with id ORD-17001 does already exist in data store LAB17_ORDENES with qualifier LAB17-Data_Store.`
+
+### Diagnóstico
+
+Monitor permitió distinguir un almacén `LAB17_ORDENES` asociado al iFlow escritor y otro identificado como `Global`. La entrada inicial había sido escrita con visibilidad `Integration Flow`, mientras que el lector solicitaba visibilidad `Global`.
+
+**Límite:** las pruebas no demuestran una migración automática de entradas al cambiar la configuración de visibilidad. Tampoco permiten generalizar el comportamiento a todos los escenarios de persistencia de SAP.
+
+### Solución y validación
+
+1. Crear una nueva versión del iFlow escritor y configurar `Visibility = Global` con un nuevo identificador `ORD-17002` tanto en Data Store Write como en el JSON generado.
+2. Desplegar y ejecutar POST: HTTP 200.
+3. Confirmar en Monitor que el payload `ORD-17002` está en el almacén Global.
+4. Versionar el iFlow lector y cambiar `Entry ID` a `ORD-17002`, manteniendo `Visibility = Global` y `Delete On Completion` desactivado.
+5. Ejecutar GET: HTTP 200 y JSON esperado.
+
+### Aprendizaje y alcance
+
+El nombre del Data Store no basta para identificar el ámbito de lectura: comprobar también la visibilidad y la ubicación real de la entrada en Monitor. Para probar comunicación entre iFlows, escribir y leer explícitamente en el ámbito global. No confundir la respuesta HTTP 200 con evidencia suficiente de persistencia: verificar el payload en Manage Data Stores.
+
+**Evidencias:** `17-12-mpl-get-entrada-no-encontrada.png`, `17-13-monitor-data-store-entrada-existente.png`, `17-14-mpl-write-entrada-duplicada.png`, `17-17-monitor-data-store-global-orden-17002.png` y `17-18-postman-data-store-get-global-orden-17002.png`, referenciadas en el capítulo 17.
