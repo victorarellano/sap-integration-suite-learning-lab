@@ -217,3 +217,15 @@ Antes de ofrecer los archivos descargables, comprobar:
 - Diferenciar laboratorios completados con evidencia práctica (`✅ Completado`) de temas solo analizados (`🟦 Revisado`) o todavía en curso (`🟨 En curso`).
 - Evitar pruebas, capturas y repeticiones que no aporten evidencia nueva.
 - El usuario revisa y publica los archivos en GitHub; el asistente no realiza commits salvo autorización expresa.
+
+
+## 14. Escenarios integradores por capítulo
+
+- Cuando un capítulo incluya varios laboratorios relacionados, evaluar un **escenario integrador** que combine capacidades ya estudiadas y permita verificar un flujo funcional de extremo a extremo.
+- El escenario debe responder a un objetivo de integración concreto, con datos de entrada, procesamiento, resultado esperado y comprobaciones observables. No basta con reunir pasos anteriores sin aportar una validación nueva.
+- Priorizar la reutilización de iFlows, componentes, configuraciones y conocimientos del curso cuando sea técnicamente adecuado. Antes de modificar un iFlow existente o crear una nueva versión, avisar y solicitar confirmación.
+- Evitar adelantar funcionalidades de capítulos posteriores si ello introduce complejidad innecesaria. Cuando corresponda, limitar el escenario al alcance del capítulo actual.
+- Mantener peticiones Postman independientes y evidencias correlativas del capítulo. Validar tanto el resultado funcional como los estados o mensajes relevantes en Monitor cuando aporten información nueva.
+- El escenario integrador **no es obligatorio**: incorporarlo solo cuando tenga valor pedagógico y técnico. Su alcance y sus criterios de aceptación deben acordarse antes de implementarlo.
+- Considerarlo `✅ Completado` únicamente cuando exista evidencia práctica verificable del flujo integrado. Las explicaciones o diseños sin ejecución conservan el estado correspondiente.
+- Documentar el escenario en el Markdown del capítulo, con su propósito, arquitectura o flujo, decisiones de diseño, pasos reproducibles, resultados y evidencias situadas donde corresponden.
