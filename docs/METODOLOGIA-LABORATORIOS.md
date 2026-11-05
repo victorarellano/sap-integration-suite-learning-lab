@@ -20,6 +20,37 @@ Antes de proponer instrucciones prácticas:
 
 Si algún archivo no está disponible, informarlo explícitamente. No asumir su contenido ni comenzar una implementación que dependa de él.
 
+## 2.1. Investigación técnica y aprobación del diseño antes de cada laboratorio
+
+**Obligatorio antes de crear, versionar o modificar un iFlow.** Esta fase se realiza después de revisar el estado del repositorio y antes del primer paso práctico.
+
+1. **Identificar las capacidades involucradas.** Enumerar componentes, adaptadores, operaciones y opciones concretas que se usarán, incluyendo formatos de mensaje y ámbito de ejecución.
+2. **Consultar fuentes oficiales de SAP.** Revisar SAP Help Portal y, cuando corresponda, notas SAP o documentación oficial del componente y de su versión. Comprobar requisitos, restricciones, entradas y salidas, semántica de las opciones, comportamiento ante errores y compatibilidad entre componentes. Incluir enlaces y referencias precisas; no presentar documentación no consultada como verificada.
+3. **Contrastar con el entorno real.** Revisar configuraciones y evidencias de laboratorios anteriores, y distinguir diferencias de versión o interfaz. Si no se puede confirmar una característica, marcarla como **no verificada** y proponer una prueba exploratoria explícita antes de depender de ella.
+4. **Presentar una ficha de diseño previa**, que contenga:
+   - Problema de integración y objetivo de aprendizaje.
+   - Valor nuevo frente a laboratorios anteriores; reutilización prevista.
+   - Arquitectura y secuencia de procesamiento (diagrama textual o Mermaid si aporta claridad).
+   - iFlows afectados y versionado previsto; Data Stores y otros recursos.
+   - Formato y ejemplos de entrada/salida, métodos HTTP y códigos de respuesta.
+   - Configuración relevante de cada componente y motivo técnico.
+   - Matriz de casos positivos, negativos y límites; resultados esperados y evidencias necesarias.
+   - Riesgos, efectos secundarios, seguridad, limpieza y reversibilidad.
+   - Fuentes oficiales consultadas y puntos que siguen siendo hipótesis.
+5. **Revisión de viabilidad.** Antes de iniciar, identificar incompatibilidades de formatos, limitaciones del runtime y supuestos no demostrados. No construir una cadena de componentes que dependa de comportamientos no confirmados.
+6. **Solicitar aprobación expresa del diseño.** El usuario debe comprender qué se implementará y qué se validará. Los cambios sustanciales posteriores requieren explicar el motivo y obtener nueva aprobación.
+7. **Ejecutar paso a paso.** Solo después de la aprobación aplicar la sección 3 de esta metodología. La ejecución valida el escenario previamente diseñado; no sustituye la investigación técnica.
+
+### Tratamiento de incertidumbre y fallos
+
+- Diferenciar **documentado por SAP**, **validado en este entorno** y **pendiente de comprobar**.
+- Si una prueba contradice el diseño, detener la implementación, consultar las fuentes y el MPL, presentar el diagnóstico sustentado y actualizar la ficha antes de continuar.
+- No atribuir una causa al componente, al runtime o a SAP sin evidencia suficiente.
+- Registrar en `docs/kba-y-hallazgos.md` los errores reutilizables con síntoma, diagnóstico, corrección, validación y alcance.
+- Evitar pruebas y capturas redundantes. Las evidencias se acuerdan antes de solicitarlas, con nombre correlativo y propósito concreto.
+
+**Criterio de entrada al laboratorio:** no iniciar la implementación mientras falten fuentes esenciales, el diseño no sea viable o el usuario no haya aprobado el alcance.
+
 ## 3. Secuencia de trabajo por laboratorio
 
 1. Presentar el objetivo específico y explicar por qué se realizará el ejercicio.
@@ -81,7 +112,7 @@ No afirmar que la imagen está incorporada al repositorio hasta comprobar que el
 - Crear **peticiones independientes por laboratorio**, identificadas por número y objetivo.
 - Configurar método HTTP, URL, autenticación, headers, body y pruebas según cada caso.
 - Utilizar variables de entorno para valores reutilizables y evitar secretos en archivos exportados.
-- Cuando un laboratorio requiera casos positivos y negativos, crear peticiones diferenciadas si facilita su ejecución y validación.
+- Cuando un laboratorio requiera casos positivos y negativos, crear peticiones diferenciadas si facilita su ejecución.
 - Validar cada petición individualmente antes de considerar pruebas agrupadas mediante Collection Runner.
 - No confundir la independencia de peticiones Postman con la obligación de crear un iFlow diferente para cada una.
 
@@ -217,7 +248,6 @@ Antes de ofrecer los archivos descargables, comprobar:
 - Diferenciar laboratorios completados con evidencia práctica (`✅ Completado`) de temas solo analizados (`🟦 Revisado`) o todavía en curso (`🟨 En curso`).
 - Evitar pruebas, capturas y repeticiones que no aporten evidencia nueva.
 - El usuario revisa y publica los archivos en GitHub; el asistente no realiza commits salvo autorización expresa.
-
 
 ## 14. Escenarios integradores por capítulo
 
