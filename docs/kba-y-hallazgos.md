@@ -667,3 +667,69 @@ Monitor permitió distinguir un almacén `LAB17_ORDENES` asociado al iFlow escri
 El nombre del Data Store no basta para identificar el ámbito de lectura: comprobar también la visibilidad y la ubicación real de la entrada en Monitor. Para probar comunicación entre iFlows, escribir y leer explícitamente en el ámbito global. No confundir la respuesta HTTP 200 con evidencia suficiente de persistencia: verificar el payload en Manage Data Stores.
 
 **Evidencias:** `17-12-mpl-get-entrada-no-encontrada.png`, `17-13-monitor-data-store-entrada-existente.png`, `17-14-mpl-write-entrada-duplicada.png`, `17-17-monitor-data-store-global-orden-17002.png` y `17-18-postman-data-store-get-global-orden-17002.png`, referenciadas en el capítulo 17.
+
+
+## KBA — Data Store Select: error de parseo XML al seleccionar una entrada JSON (17.3)
+
+**Ámbito:** SAP Cloud Integration, Data Store Select.
+**Estado:** escenario corregido y validado el 05/11/2026.
+
+### Síntoma
+
+La petición GET de `17.3 - Data Store Select` devolvió HTTP 500. En el MPL, el paso `DS_Select_Ordenes` registró:
+
+```text
+Unexpected character '{' (code 123) in prolog; expected '<'
+at [row,col {unknown-source}]: [1,1]
+```
+
+El mismo MPL identificó el almacén `LAB17_ORDENES` y la entrada `ORD-17002`. En Monitor se verificó que el payload de esa entrada era JSON y comenzaba por `{`.
+
+### Diagnóstico
+
+El error demuestra que durante la operación Select se intentó interpretar como XML un contenido que empezaba por `{`, propio del JSON almacenado. La lectura individual mediante Data Store Get había funcionado con esa entrada en 17.2; por tanto, no corresponde concluir que el almacenamiento o la lectura de JSON estuvieran defectuosos.
+
+**Límite:** no se verificó si existe otra configuración o transformación que permita utilizar Select con JSON. El resultado describe el escenario probado, no una prohibición universal del componente.
+
+### Solución aplicada
+
+1. Preparar un payload XML de prueba con ID `ORD-17003` mediante `CM_Preparar_Mensaje`.
+2. Almacenar la entrada en un Data Store global separado, `LAB17_ORDENES_XML`, evitando mezclarla con entradas JSON.
+3. Apuntar `DS_Select_Ordenes` al mismo almacén y mantener `Number of Polled Messages = 1`, `Delete On Completion = off`.
+4. Ejecutar GET: HTTP 200 y XML `<messages><message id="ORD-17003">...</message></messages>`.
+5. Incorporar una ruta independiente de Delete, comprobar HTTP 200 y verificar que la consulta posterior devuelve `<messages/>`.
+
+### Aprendizaje reutilizable
+
+Ante un error de parseo en Select, revisar el payload real de la entrada identificada por el MPL, no solamente la configuración del paso. Separar datos de prueba por formato permitió validar la operación sin alterar los registros JSON del laboratorio anterior.
+
+**Evidencias:** MPL de error revisado durante 17.3; `17-37-postman-router-select-exitoso.png`, `17-38-postman-data-store-delete-exitoso.png`, `17-39-monitor-data-store-xml-eliminado.png`, `17-40-postman-select-data-store-vacio.png`.
+
+---
+
+## KBA — Restricción entre umbral de alerta y expiración en Data Store Write (17.4)
+
+**Ámbito:** SAP Cloud Integration, Data Store Write.
+**Estado:** configuración corregida y fechas validadas el 05/11/2026.
+
+### Síntoma
+
+Al configurar `Retention Threshold for Alerting = 1` y `Expiration Period = 1`, el editor mostró:
+
+```text
+'Expiration Period' should be greater than 'Retention Threshold for Alerting'
+```
+
+### Diagnóstico
+
+La validación de la interfaz exige que `Expiration Period` sea estrictamente mayor que `Retention Threshold for Alerting` en la configuración ensayada. No se desplegó la combinación inválida.
+
+### Solución y validación
+
+Se conservó el umbral de 1 día y se cambió la expiración a 2 días. En la versión `1.0.6` del iFlow escritor se creó `ORD-17005` en `LAB17_EXPIRACION`. Monitor registró `Due At` un día después de `Created At` y `Retain Until` dos días después. La entrada previa `ORD-17004`, creada con 2/30 días, conservó sus fechas originales.
+
+### Alcance
+
+Se validaron las fechas calculadas y la coexistencia de entradas con configuraciones distintas. **No se ha verificado todavía la eliminación automática por expiración**; no debe declararse completada sin observación posterior.
+
+**Evidencias:** `17-44-monitor-data-store-fechas-retencion-expiracion.png` y `17-45-monitor-comparacion-retencion-expiracion.png`.
