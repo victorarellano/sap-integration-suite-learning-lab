@@ -786,3 +786,20 @@ La representación visual no garantizaba que el paso estuviera insertado en el f
 ### Aprendizaje y alcance
 
 Verificar la secuencia efectiva de pasos en Trace y no deducir ejecución únicamente de la posición de un icono en el editor. Diferenciar texto literal de expresión evaluada en Content Modifier. Ambos hallazgos fueron comprobados en este iFlow; no se atribuyen a una falla general del editor o del runtime.
+
+
+## KBA — Respuesta HTTP binaria después de publicar correctamente en JMS
+
+**Origen:** 18.2. **Estado:** diagnóstico abierto.
+
+### Síntomas
+
+Postman recibió HTTP `202 Accepted` con un body binario no legible tras enviar `ORD-18001` al productor `LAB18-JMS-Productor`. En la respuesta no se observó `Content-Type`; sí `Sap_use_data_compression: true` y `Transfer-Encoding: chunked`.
+
+### Comprobaciones y diagnóstico
+
+La cola `JMS_LAB18_JMS_Productor` quedó `Started` con una entrada `Waiting`; su payload conservó el JSON original. El MPL finalizó `Completed`, `IntermediateError = false`, 882 ms, y el identificador de mensaje permitió correlacionar las observaciones. **La causa del body binario no está confirmada.** El indicador de compresión no demuestra por sí solo causalidad.
+
+### Solución y alcance
+
+No se aplicó ninguna modificación: la publicación JMS fue validada. Si se requiere un cuerpo HTTP legible, deberá investigarse la generación de la respuesta y contrastarse con documentación oficial antes de alterar el diseño. No atribuir el síntoma a la compresión sin una prueba específica.
