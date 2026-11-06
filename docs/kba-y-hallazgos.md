@@ -803,3 +803,36 @@ La cola `JMS_LAB18_JMS_Productor` quedó `Started` con una entrada `Waiting`; su
 ### Solución y alcance
 
 No se aplicó ninguna modificación: la publicación JMS fue validada. Si se requiere un cuerpo HTTP legible, deberá investigarse la generación de la respuesta y contrastarse con documentación oficial antes de alterar el diseño. No atribuir el síntoma a la compresión sin una prueba específica.
+
+
+## KBA — Expresión `jsonpath` no reconocida al iniciar consumidor JMS
+
+**Origen:** laboratorio 18.3, `LAB18-JMS-Consumidor` (06/11/2026). **Estado:** resuelto y validado en este escenario.
+
+### Síntoma
+
+El primer despliegue del consumidor mostró `The Integration Flow is not operational`. En **Status Details** apareció `Context startup failed` y `Unknown function: jsonpath:$.ordenId` al evaluar `SetProperty[OrdenId, simple{${jsonpath:$.ordenId}}]`.
+
+### Diagnóstico
+
+El Content Modifier intentaba crear la Exchange Property `OrdenId` mediante `${jsonpath:$.ordenId}`. El runtime no reconoció esa función en el contexto de expresión utilizado y no pudo iniciar la ruta. La captura no demuestra un problema con JMS ni con el Groovy; el fallo se localizó en la creación de la propiedad.
+
+### Solución aplicada
+
+Se eliminó la fila de Exchange Property problemática. En el recurso existente `GRV_RegistraMensajeJMS.groovy` se analizó el JSON directamente con `JsonSlurper` usando un `Reader`:
+
+```groovy
+import groovy.json.JsonSlurper
+
+def json = new JsonSlurper().parse(message.getBody(java.io.Reader))
+def ordenId = json.ordenId
+message.setProperty("OrdenId", ordenId.toString())
+```
+
+El script también validó la presencia de `ordenId` y lo registró en el MPL con `messageLog.addCustomHeaderProperty("OrdenId", ordenId.toString())`. La lectura con `java.io.Reader` eliminó la advertencia del editor por análisis sin streaming; esta práctica ya estaba documentada en los antecedentes de los capítulos 08 y 13 y no constituye un hallazgo nuevo independiente.
+
+### Validación y alcance
+
+Tras guardar y desplegar, el MPL de `LAB18-JMS-Consumidor` mostró `Completed` (836 ms), Custom Header `OrdenId = ORD-18001` y correlación con el productor. La cola quedó con cero entradas. **La corrección está validada para este iFlow y esta expresión; no implica que toda variante de JSONPath sea incompatible con SAP Cloud Integration.**
+
+**Evidencias:** `18-12-jms-consumidor-error-jsonpath.png`, `18-13-jms-consumidor-mpl-completed.png`, `18-14-jms-cola-vacia-despues-consumo.png`.

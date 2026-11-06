@@ -1,6 +1,6 @@
 # 18 - Integraciones asíncronas y colas
 
-**Estado del tema:** 🟨 En curso - 18.1 y 18.2 validados; 18.3–18.5 pendientes
+**Estado del tema:** 🟨 En curso - 18.1, 18.2 y 18.3 validados; 18.4 y 18.5 pendientes
 **Package:** `CPI Learning Lab`
 **Inicio:** 06/11/2026
 **Fecha objetivo de cierre:** 08/11/2026 (planificación, no resultado confirmado)
@@ -46,7 +46,7 @@ flowchart TD
     F -.-> C
 ```
 
-El productor entrega mensajes a una infraestructura intermedia; el consumidor los recupera y procesa de forma independiente. Las flechas punteadas son conceptuales: **no demuestran** un mecanismo automático de reintentos ni el retorno efectivo a la cola. La arquitectura no se considera validada hasta confirmar el servicio, el adaptador y su comportamiento en el entorno.
+El productor entrega mensajes a una infraestructura intermedia; el consumidor los recupera y procesa de forma independiente. Las flechas punteadas son conceptuales: **no demuestran** un mecanismo automático de reintentos ni el retorno efectivo a la cola. La publicación y el consumo normales quedaron validados en 18.2 y 18.3. Las rutas punteadas de recuperación siguen siendo conceptuales y no han sido comprobadas.
 
 ## Prerrequisitos y restricciones
 
@@ -54,7 +54,7 @@ El productor entrega mensajes a una infraestructura intermedia; el consumidor lo
 - Package `CPI Learning Lab` y Postman con una carpeta específica del capítulo 18.
 - Conocimientos de HTTPS Sender, headers, properties, manejo de errores, MPL y Data Store.
 - **Verificado:** JMS Resources OK, 20 colas y 6000 MB máximos visibles; productor desplegado, cola creada y publicación comprobada.
-- **Pendiente de investigación técnica:** documentación oficial SAP aplicable a la capacidad y versión utilizadas, semántica de consumo, confirmación, reintentos y recuperación.
+- **Pendiente de investigación técnica para 18.4:** semántica de reintentos, cola de mensajes fallidos, confirmación y recuperación bajo error.
 - No crear ni modificar iFlows ni versiones hasta presentar la ficha de diseño y obtener aprobación expresa.
 
 ## Laboratorios
@@ -189,7 +189,7 @@ flowchart LR
 
    ![Evidencia 18-08 - MPL Completed](images/tema-18/18-08-jms-productor-mpl-completed.png)
 
-**Resultado y validación:** publicación efectiva de `ORD-18001`, mensaje almacenado en JMS con JSON íntegro, productor iniciado y MPL completado. El consumo permanece pendiente para 18.3.
+**Resultado y validación:** publicación efectiva de `ORD-18001`, mensaje almacenado en JMS con JSON íntegro, productor iniciado y MPL completado. El consumo posterior se validó en 18.3.
 
 **Problema encontrado:** Postman devolvió un cuerpo binario no legible con HTTP `202`. Los headers de respuesta no incluían `Content-Type`; aparecían `Sap_use_data_compression: true` y `Transfer-Encoding: chunked`. No se confirmó la causa; no se modificó el iFlow. Se documenta como hallazgo abierto en KBA.
 
@@ -197,17 +197,123 @@ flowchart LR
 
 ### 18.3 - Consumo asíncrono mediante iFlow
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Completado - validado el 06/11/2026.
 
-**Objetivo:** procesar mensajes sin acoplar el ciclo de vida del consumidor a la solicitud original.
+**Objetivo:** recuperar una orden previamente publicada en JMS mediante un iFlow independiente, verificar su ejecución y relacionar los MPL de productor y consumidor sin modificar el JSON original.
 
-**Laboratorio paso a paso:** pendiente de diseño aprobado.
+**Conceptos:** el JMS Sender del consumidor lee desde la cola que alimenta el JMS Receiver del productor. El procesamiento se realiza con independencia temporal de la solicitud HTTPS inicial. Un Custom Header del MPL permite buscar por identificador funcional; los IDs de correlación permiten relacionar ejecuciones.
 
-**Resultado esperado:** mensaje consumido y procesamiento verificable.
+**Prerrequisitos:** 18.1 y 18.2 completados; mensaje `ORD-18001` aún almacenado en `JMS_LAB18_JMS_Productor` antes del primer despliegue del consumidor.
 
-**Validación y evidencias:** pendientes.
+**Arquitectura implementada:**
 
-**Problemas encontrados y aprendizajes:** pendientes.
+```mermaid
+flowchart LR
+    P["LAB18-JMS-Productor"] --> Q[("JMS_LAB18_JMS_Productor")]
+    Q --> S["JMS Sender"]
+    S --> A["Start"]
+    A --> C["CM_Registrar_Consumo_JMS"]
+    C --> G["Groovy: GRV_RegistraMensajeJMS.groovy"]
+    G --> E["End"]
+    G -. "Custom Header OrdenId" .-> M["MPL consumidor"]
+```
+
+**iFlow:** `LAB18-JMS-Consumidor`, ID `LAB18_JMS_Consumidor`, versión observada `1.0.0` durante el primer despliegue. No se verificó un número de versión posterior al ajuste; no se presupone uno.
+
+**Configuración del adaptador JMS Sender:**
+
+| Parámetro | Valor observado/configurado |
+|---|---|
+| Queue Name | `JMS_LAB18_JMS_Productor` |
+| Access Type | `Non-Exclusive` |
+| Number of Concurrent Processes | `1` |
+| Retry Interval | `1` minuto (valor observado) |
+| Exponential Backoff | Activado (valor observado) |
+| Maximum Retry Interval | `60` minutos (valor observado) |
+| Dead-Letter Queue | Activado (valor observado) |
+
+Los parámetros de reintento se observaron en la interfaz, **pero su comportamiento no fue probado** en este laboratorio; se evaluará en 18.4.
+
+**Laboratorio paso a paso y evidencias:**
+
+1. Confirmar en Monitor que la orden `ORD-18001` permanecía almacenada en la cola. Crear en `CPI Learning Lab` un iFlow independiente `LAB18-JMS-Consumidor`, con JMS Sender conectado a Start y con End. Configurar la cola existente, acceso `Non-Exclusive` y un proceso concurrente. No desplegar aún: el consumidor podría retirar el mensaje inmediatamente.
+2. Incorporar `CM_Registrar_Consumo_JMS`. Inicialmente se configuró una Exchange Property `OrdenId` mediante `${jsonpath:$.ordenId}`. Esta expresión **no es parte de la configuración final**, pues impidió el arranque del iFlow; la extracción se trasladó a Groovy.
+
+   **Evidencia 18-09 - Configuración inicial del consumidor**
+
+   Se documenta el Content Modifier con la expresión inicialmente configurada. La captura corresponde al estado previo a la corrección, no al diseño final.
+
+   ![Evidencia 18-09 - Configuración inicial de Exchange Property](images/tema-18/18-09-jms-consumidor-exchange-property.png)
+
+3. Incorporar un Groovy Script entre Content Modifier y End, con función `processData`. Verificar que el recurso asociado es `/script/GRV_RegistraMensajeJMS.groovy` (nombre efectivo observado, distinto del nombre inicialmente propuesto).
+
+   **Evidencia 18-10 - Arquitectura y asociación del Groovy**
+
+   Se comprueba la conexión JMS Sender → Start → Content Modifier → Groovy Script → End y el recurso vinculado.
+
+   ![Evidencia 18-10 - Arquitectura del consumidor](images/tema-18/18-10-jms-consumidor-arquitectura-groovy.png)
+
+4. Crear y guardar el recurso Groovy. El primer código recuperaba `OrdenId` desde una Exchange Property. Tras detectar el error de arranque, se corrigió para leer el JSON directamente con `JsonSlurper` y `java.io.Reader`, establecer `OrdenId` como propiedad y registrarlo en el MPL. El contenido funcional final es:
+
+   ```groovy
+   import com.sap.gateway.ip.core.customdev.util.Message
+   import groovy.json.JsonSlurper
+
+   def Message processData(Message message) {
+       def json = new JsonSlurper().parse(message.getBody(java.io.Reader))
+       def ordenId = json.ordenId
+
+       if (ordenId == null || ordenId.toString().trim().isEmpty()) {
+           throw new IllegalArgumentException("El mensaje no contiene un ordenId valido")
+       }
+
+       message.setProperty("OrdenId", ordenId.toString())
+       def messageLog = messageLogFactory.getMessageLog(message)
+       if (messageLog != null) {
+           messageLog.addCustomHeaderProperty("OrdenId", ordenId.toString())
+       }
+       return message
+   }
+   ```
+
+   La captura siguiente documenta el recurso asociado **antes de la corrección definitiva**; el código anterior representa la corrección que se utilizó para obtener el procesamiento exitoso.
+
+   **Evidencia 18-11 - Recurso Groovy del consumidor**
+
+   Se identifica el recurso y la lógica inicial de registro de `OrdenId` en el MPL.
+
+   ![Evidencia 18-11 - Código Groovy inicial](images/tema-18/18-11-jms-consumidor-codigo-groovy.png)
+
+5. Desplegar inicialmente el consumidor. El estado fue `The Integration Flow is not operational`; el detalle indicó `Unknown function: jsonpath:$.ordenId` durante `Context startup failed`. El fallo ocurrió al crear la propiedad del Content Modifier, antes de validar consumo. Se conservó el error y se autorizó la corrección.
+
+   **Evidencia 18-12 - Error de despliegue por expresión JSONPath**
+
+   La captura del monitor muestra el error de arranque y la expresión rechazada.
+
+   ![Evidencia 18-12 - Error JSONPath](images/tema-18/18-12-jms-consumidor-error-jsonpath.png)
+
+6. Eliminar la Exchange Property problemática del Content Modifier. Actualizar el Groovy para extraer el identificador directamente del JSON. El editor advirtió que analizar el body con `message.getBody(String)` y `parseText` no utilizaba streaming; se aplicó el patrón ya registrado en KBA: `new JsonSlurper().parse(message.getBody(java.io.Reader))`. El usuario confirmó que desapareció la advertencia, guardó y desplegó.
+7. Revisar **Monitor → Message Processing**. El consumidor finalizó `Completed` en **836 ms**; el Custom Header `OrdenId` mostró `ORD-18001`. El `Correlation ID` coincidió con el del productor y el `Predecessor ID` correspondió al Message ID del productor.
+
+   **Evidencia 18-13 - Consumo JMS completado y correlacionado**
+
+   El MPL confirma la ejecución exitosa y la trazabilidad funcional de `ORD-18001`.
+
+   ![Evidencia 18-13 - MPL del consumidor](images/tema-18/18-13-jms-consumidor-mpl-completed.png)
+
+8. Abrir **Monitor → Manage Stores → Message Queues**, actualizar la vista y comprobar la cola. Se observaron `JMS Resources: OK`, `State: Started`, **Entries = 0** y `Messages (0)`.
+
+   **Evidencia 18-14 - Cola vacía tras el consumo**
+
+   La cola no conserva entradas pendientes después de la ejecución exitosa del consumidor.
+
+   ![Evidencia 18-14 - Cola vacía después del consumo](images/tema-18/18-14-jms-cola-vacia-despues-consumo.png)
+
+**Resultado esperado y validación:** procesamiento del JSON por el consumidor, registro de `OrdenId` en MPL, correlación con el productor y cola sin entradas pendientes. **Todos estos criterios fueron observados** para `ORD-18001`. No se afirma que se hayan probado fallos, reintentos, duplicados o semánticas de entrega en escenarios adversos.
+
+**Problemas encontrados:** (1) expresión `${jsonpath:$.ordenId}` no reconocida en el Content Modifier al iniciar el runtime; (2) advertencia de streaming al usar `getBody(String)` con `JsonSlurper.parseText`, resuelta mediante `java.io.Reader`. El primer problema se registra como hallazgo reutilizable; el segundo se relaciona con el KBA ya existente.
+
+**Aprendizajes:** comprobar el despliegue real, no solo la sintaxis visual del editor; usar un parser de JSON compatible con streaming; mantener el body original; correlacionar MPLs mediante identificadores técnicos y el identificador funcional `OrdenId`; verificar el vaciado de la cola tras el consumo.
 
 ### 18.4 - Errores, reintentos y duplicados
 
@@ -240,7 +346,7 @@ flowchart LR
 ## Criterios de validación y cierre
 
 Cada laboratorio solo pasará a `✅ Completado` con evidencia práctica que respalde su resultado. Los conceptos explicados sin comprobación conservarán `🟦 Revisado`; los bloqueos reales se registrarán como `⛔ Bloqueado`. Las evidencias usarán numeración correlativa `18-01`, `18-02`, etc., asignada antes de solicitar cada captura, con título y descripción junto al paso correspondiente.
-Se realizó el primer corte documental tras 18.1 y 18.2; el siguiente corresponde tras 18.3 y 18.4. Al cierre se actualizarán el Markdown del capítulo, el fragmento del README y, si corresponde, `docs/kba-y-hallazgos.md`. El usuario publicará los archivos en GitHub.
+Se realizó el primer corte documental tras 18.1 y 18.2; el segundo corte se preparó al finalizar la jornada tras 18.3, antes de iniciar 18.4. Al cierre se actualizarán el Markdown del capítulo, el fragmento del README y, si corresponde, `docs/kba-y-hallazgos.md`. El usuario publicará los archivos en GitHub.
 
 ## Referencias
 
