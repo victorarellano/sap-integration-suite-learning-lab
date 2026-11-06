@@ -733,3 +733,56 @@ Se conservó el umbral de 1 día y se cambió la expiración a 2 días. En la ve
 Se validaron las fechas calculadas y la coexistencia de entradas con configuraciones distintas. **No se ha verificado todavía la eliminación automática por expiración**; no debe declararse completada sin observación posterior.
 
 **Evidencias:** `17-44-monitor-data-store-fechas-retencion-expiracion.png` y `17-45-monitor-comparacion-retencion-expiracion.png`.
+
+## KBA — Data Store de negocio e historial interno de Idempotent Process Call
+
+**Origen:** Capítulo 17.5 — Idempotencia de órdenes y recuperación ante errores.
+**Artefactos:** `LAB17-Ordenes-Idempotencia`, `LAB17-Data Store`.
+**Estado:** Comportamientos reproducidos y validados el 06/11/2026.
+
+### Síntomas y contexto
+
+Al eliminar del Data Store de negocio una orden que había sido procesada satisfactoriamente y volver a enviarla, el Idempotent Process Call continuó reconociéndola como duplicada (HTTP 409). El borrado de la entrada de negocio no reinició el historial interno de idempotencia.
+En otra prueba, se preparó `ORD-17503` en `LAB17_ORDENES_IDEMPOTENTES` mediante un writer independiente. El primer intento desde el iFlow con Idempotent Process Call falló con HTTP 500 porque Data Store Write encontró el Entry ID ya existente. El MPL registró:
+
+```text
+An entry with id ORD-17503 does already exist in data store LAB17_ORDENES_IDEMPOTENTES
+```
+
+### Diagnóstico y diferenciación
+
+El almacén de negocio `LAB17_ORDENES_IDEMPOTENTES` contiene los mensajes persistidos por Data Store Write. Idempotent Process Call mantiene por separado su control de identificadores procesados. Eliminar una entrada del primer almacén no constituye una operación de reinicio del segundo.
+El primer intento de `ORD-17503` no completó satisfactoriamente el procesamiento. Tras eliminar la entrada preexistente que causaba el conflicto, el mismo identificador fue aceptado nuevamente.
+
+### Corrección y validación
+
+1. Preparar una entrada `ORD-17503` mediante writer independiente, sin ejecutar el Idempotent Process Call.
+2. Enviar `ORD-17503` al iFlow de idempotencia: HTTP 500 y error de entrada existente en MPL.
+3. Eliminar exclusivamente la entrada `ORD-17503` del Data Store de negocio.
+4. Reintentar la misma petición: HTTP 201, `REGISTRADA`, y nueva entrada persistida.
+5. Repetir la petición: HTTP 409, `DUPLICADA`.
+
+### Alcance y precauciones
+
+Los resultados corresponden al escenario ejecutado en SAP Cloud Integration. No se ha probado un rollback coordinado con sistemas externos ni el comportamiento ante fallos en todas las etapas posibles del iFlow. No utilizar el borrado de entradas de negocio como mecanismo general para reiniciar idempotencia. La reversión temporal del writer se efectuó a la versión 1.0.6 y se confirmó el despliegue restaurado.
+
+**Evidencias:** `17-55` a `17-59`, junto a la validación de duplicado `17-51` y `17-52` del capítulo 17.
+
+**Referencias:** [SAP — Define Idempotent Process Call](https://help.sap.com/docs/cloud-integration/sap-cloud-integration/define-idempotent-process-call); [SAP — Define Data Store Write Operations](https://help.sap.com/docs/integration-suite/isuite-integrations-and-apis/define-data-store-write-operations).
+
+## KBA — Validar la conexión real del Idempotent Process Call y la evaluación del Body
+
+**Origen:** Capítulo 17.5. **Estado:** Resuelto y validado.
+
+### Síntomas
+
+En el primer diseño, el componente Idempotent Process Call parecía estar situado sobre el conector del proceso principal, pero Trace mostraba una ejecución de cuatro pasos sin invocar el proceso local ni escribir en Data Store. La respuesta HTTP 200 devolvía el JSON de entrada. Tras corregir la conexión, el componente apareció en la traza y la ruta de registro escribió correctamente.
+En los Content Modifiers de respuesta, el Body configurado como **Constant** devolvió el texto literal `${property.OrdenId}` en vez del identificador de la orden.
+
+### Diagnóstico y solución
+
+La representación visual no garantizaba que el paso estuviera insertado en el flujo de ejecución. Se corrigieron las conexiones y se comprobó la ejecución con Trace. Para generar respuestas JSON con un identificador dinámico, se cambió el Body de **Constant** a **Expression** y se validó el valor resuelto mediante Postman.
+
+### Aprendizaje y alcance
+
+Verificar la secuencia efectiva de pasos en Trace y no deducir ejecución únicamente de la posición de un icono en el editor. Diferenciar texto literal de expresión evaluada en Content Modifier. Ambos hallazgos fueron comprobados en este iFlow; no se atribuyen a una falla general del editor o del runtime.
