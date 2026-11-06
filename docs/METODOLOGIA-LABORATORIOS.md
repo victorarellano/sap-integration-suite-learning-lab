@@ -51,6 +51,44 @@ Si algún archivo no está disponible, informarlo explícitamente. No asumir su 
 
 **Criterio de entrada al laboratorio:** no iniciar la implementación mientras falten fuentes esenciales, el diseño no sea viable o el usuario no haya aprobado el alcance.
 
+## 2.2. Presentación inicial obligatoria del capítulo: alcance, tiempos y diagramas
+
+**Aplicación:** desde el capítulo 18 y para todos los capítulos restantes o adicionales. Esta presentación se realiza después de consultar los documentos de la sección 2 y antes de la investigación detallada, aprobación del diseño e implementación descritas en 2.1.
+
+Antes de iniciar cada capítulo, el asistente debe presentar y acordar con el usuario:
+
+1. **Introducción y propósito:** qué problema de integración aborda el capítulo, por qué es relevante y cómo continúa los aprendizajes anteriores.
+2. **Alcance delimitado:** capacidades que se estudiarán, qué queda fuera y dependencias que podrían impedir la práctica. Diferenciar propuestas de funcionalidades verificadas en el entorno.
+3. **Microaprendizajes y laboratorios:** tabla con identificador correlativo (`NN.1`, `NN.2`, etc.), objetivo, actividad prevista y validación observable. Evitar ejercicios redundantes.
+4. **Estimación de duración:** rango de tiempo por laboratorio y total, incluyendo configuración, pruebas, capturas y documentación. Separar tiempo efectivo de pausas; declarar incertidumbres por aprovisionamiento, permisos o restricciones de Trial.
+5. **Arquitectura conceptual:** incorporar al menos un diagrama Mermaid en la introducción cuando existan componentes o flujos de mensajes que explicar. Mostrar emisores, iFlows, adaptadores o servicios intermedios, receptores y direcciones de comunicación. Explicar el significado del diagrama y distinguir claramente la arquitectura propuesta de la validada. Si Mermaid no aporta claridad, justificar su omisión y usar un esquema textual.
+6. **Relación con el capítulo anterior:** indicar qué componentes, conocimientos, iFlows o recursos podrían reutilizarse, sin modificar artefactos antes de la aprobación correspondiente.
+7. **Riesgos y prerrequisitos:** identificar accesos, servicios y capacidades aún no comprobados; no comprometer resultados que dependan de ellos.
+8. **Criterio de cierre:** definir qué resultados prácticos y evidencias permitirán marcar cada laboratorio como `✅ Completado`.
+9. **Aprobación del alcance:** solicitar confirmación del usuario antes de pasar al diseño técnico y a los pasos de implementación. Si cambian de manera sustancial los laboratorios o la arquitectura, presentar el cambio y obtener nueva aprobación.
+
+### Ejemplo de presentación arquitectónica (capítulo 18)
+
+El siguiente diagrama es **conceptual y propuesto**, no acredita disponibilidad de JMS, Event Mesh ni ejecución en SAP BTP Trial. La elección de infraestructura de colas requiere validación técnica y del entorno antes del laboratorio.
+
+```mermaid
+flowchart TD
+    A["Postman / Sistema emisor"] --> B["iFlow Productor"]
+    B --> C[("Cola de mensajes")]
+    C --> D["iFlow Consumidor"]
+    D --> E["Procesamiento de orden"]
+    D -.-> F["Manejo de errores y reintentos"]
+    F -.-> C
+```
+
+El diagrama representa la separación entre publicación y consumo de mensajes. La ruta punteada ilustra conceptualmente la recuperación ante fallos: **no implica** que todo error vuelva automáticamente a la cola ni garantiza un mecanismo de reintento determinado. Las políticas efectivas se comprobarán según el adaptador y el servicio disponibles.
+
+### Registro en el Markdown del capítulo
+
+La introducción aprobada debe quedar al inicio del archivo del capítulo, antes de los laboratorios, con las secciones **Objetivo y contexto**, **Alcance**, **Plan de laboratorios y tiempos estimados**, **Arquitectura conceptual**, **Prerrequisitos y restricciones** y **Criterios de validación**. Conservar el diagrama Mermaid como código editable en GitHub. Ajustar las estimaciones cuando existan datos reales de ejecución, sin confundir estimaciones con tiempos medidos.
+
+Esta presentación no sustituye la ficha de diseño técnico ni la investigación oficial de la sección 2.1; ambas siguen siendo obligatorias antes de crear, versionar o modificar iFlows.
+
 ## 3. Secuencia de trabajo por laboratorio
 
 1. Presentar el objetivo específico y explicar por qué se realizará el ejercicio.
