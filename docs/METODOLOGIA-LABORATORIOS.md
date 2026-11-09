@@ -212,6 +212,15 @@ Antes de dar por cerrado el capítulo:
 5. Registrar los hallazgos reutilizables en el KBA.
 6. Confirmar qué archivos se han incorporado realmente al repositorio y cuáles quedan por subir.
 
+### 9.1. Separación entre documentación técnica y documentación del proceso
+
+- Los documentos de capítulo (`docs/NN-*.md`) deben contener exclusivamente el contenido técnico consolidado: objetivo, conceptos, arquitectura, prerrequisitos, configuraciones, procedimiento reproducible, evidencias en su paso correspondiente, resultados, problemas técnicos, aprendizajes y referencias.
+- No incluir en los documentos de capítulo comentarios de elaboración, instrucciones editoriales, indicaciones de actualización del repositorio, decisiones conversacionales, iteraciones descartadas ni recordatorios sobre el proceso de documentación.
+- Las reglas de trabajo, frecuencia de consolidación, criterios de revisión, nomenclatura de evidencias y procedimientos de actualización del repositorio deben registrarse en `docs/METODOLOGIA-LABORATORIOS.md`.
+- Los errores técnicos reproducibles deben permanecer en el capítulo cuando sean relevantes para comprender el laboratorio y registrarse en `docs/kba-y-hallazgos.md` cuando constituyan conocimiento reutilizable.
+- Al cerrar un capítulo, revisar que no existan estados pendientes, referencias obsoletas o comentarios editoriales que contradigan el estado validado. Los hallazgos técnicos realmente abiertos deben declararse con su alcance y no ocultarse.
+
+
 ## 10. Seguridad
 
 Nunca documentar ni publicar credenciales reales, tokens, contraseñas, claves privadas ni service keys completas. Usar placeholders y variables. Antes de subir capturas, scripts, colecciones Postman o documentación, revisar que no contengan secretos.

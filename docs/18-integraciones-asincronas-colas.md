@@ -494,17 +494,110 @@ flowchart LR
 
 ### 18.5 - Monitorización y validación integral
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Completado — 09/11/2026.
 
-**Objetivo:** seguir el mensaje desde su publicación hasta el procesamiento y registrar su resultado.
+**Objetivo:** demostrar la trazabilidad de una orden desde su publicación HTTPS hasta el procesamiento asíncrono en JMS, relacionando los registros MPL del productor y del consumidor y verificando el estado final de la cola.
 
-**Laboratorio paso a paso:** pendiente de diseño aprobado.
+**Conceptos:** Message ID identifica un procesamiento técnico; Correlation ID permite agrupar ejecuciones relacionadas; Predecessor ID enlaza el procesamiento consumidor con el mensaje precedente; Custom Header permite búsquedas mediante un identificador funcional. La respuesta HTTP del productor y el estado del consumidor son observaciones independientes.
 
-**Resultado esperado:** correlación y trazabilidad verificables del escenario implementado.
+**Prerrequisitos:** laboratorios 18.1–18.4 completados; iFlows `LAB18-JMS-Productor` y `LAB18-JMS-Consumidor` operativos; cola `JMS_LAB18_JMS_Productor`; acceso a Postman y a Monitor. Se reutilizaron los artefactos existentes sin modificaciones ni nuevas versiones.
 
-**Validación y evidencias:** pendientes.
+**Arquitectura validada:**
 
-**Problemas encontrados y aprendizajes:** pendientes.
+```mermaid
+flowchart LR
+    P["Postman POST /lab18/ordenes"] --> A["LAB18-JMS-Productor"]
+    A --> Q[("JMS_LAB18_JMS_Productor")]
+    Q --> B["LAB18-JMS-Consumidor"]
+    A -. "MPL productor" .-> M1["Message ID / Correlation ID"]
+    B -. "MPL consumidor" .-> M2["Predecessor ID / Correlation ID / OrdenId"]
+```
+
+#### Procedimiento y evidencias
+
+1. En Postman, ejecutar `18.5 - Trazabilidad integral - Orden positiva` mediante `POST` al endpoint `/http/lab18/ordenes` con el siguiente JSON:
+
+   ```json
+   {
+     "ordenId": "ORD-18501",
+     "cliente": "CLI-18501",
+     "monto": 35000,
+     "moneda": "CLP",
+     "estado": "PENDIENTE"
+   }
+   ```
+
+   Se obtuvo **HTTP 202 Accepted**. El body HTTP continuó siendo binario no legible; la causa permanece sin confirmar, conforme al hallazgo registrado en KBA. Esta respuesta demuestra la aceptación HTTP, no por sí sola el consumo.
+
+   **Evidencia 18-26 — Publicación de orden para trazabilidad.** Petición con `ORD-18501` y respuesta HTTP 202.
+
+   ![Evidencia 18-26 - Publicación para trazabilidad](images/tema-18/18-26-postman-publicacion-trazabilidad.png)
+
+2. En **Monitor → Monitor Message Processing**, localizar el MPL de `LAB18-JMS-Productor` asociado a la publicación. Se observó `Completed`, actualizado el **09/11/2026 a las 17:47:50**, con tiempo de procesamiento **91 ms**.
+
+   - **Message ID del productor:** `AGryMXbmux8gz2nAZ4zUk5ZgMVYs`.
+   - **Correlation ID:** `AGryMXbRQXLs7sPfQLfYDBAJOudm`.
+
+   **Evidencia 18-27 — MPL del productor.** Estado satisfactorio e identificadores técnicos de la publicación.
+
+   ![Evidencia 18-27 - Productor y MPL](images/tema-18/18-27-jms-productor-trazabilidad-mpl.png)
+
+3. Localizar el MPL de `LAB18-JMS-Consumidor` actualizado a las **17:47:50**. Se observó `Completed`, duración **4 ms**, y los siguientes valores:
+
+   - **Message ID del consumidor:** `AGryMXb4d7PoRo6jhyaGdB0amlp3`.
+   - **Correlation ID:** `AGryMXbRQXLs7sPfQLfYDBAJOudm`, igual al productor.
+   - **Predecessor ID:** `AGryMXbmux8gz2nAZ4zUk5ZgMVYs`, igual al Message ID del productor.
+   - **Custom Header:** `OrdenId = ORD-18501`.
+
+   La coincidencia del Correlation ID y el enlace explícito por Predecessor ID permiten relacionar ambos procesamientos. El Custom Header vincula la ejecución del consumidor con la orden de negocio.
+
+   **Evidencia 18-28 — Correlación del consumidor.** MPL completado, identificadores técnicos y Custom Header `OrdenId`.
+
+   ![Evidencia 18-28 - Consumidor correlacionado](images/tema-18/18-28-jms-consumidor-correlacion-mpl.png)
+
+4. Buscar en Monitor el **Correlation ID** `AGryMXbRQXLs7sPfQLfYDBAJOudm`. El resultado mostró **dos registros**, uno para el productor y otro para el consumidor, ambos `Completed` a las 17:47:50. Esta consulta permite reconstruir el recorrido sin localizar cada artefacto por separado.
+
+   **Evidencia 18-29 — Búsqueda por Correlation ID.** Se recuperan ambos procesamientos relacionados.
+
+   ![Evidencia 18-29 - Búsqueda por correlación](images/tema-18/18-29-jms-busqueda-correlation-id.png)
+
+5. En los filtros de **Monitor Message Processing**, utilizar **Custom Header** con la expresión `OrdenId=ORD-18501`. Este filtro utiliza el valor registrado en el MPL por el Groovy del consumidor.
+
+   **Evidencia 18-30 — Configuración del filtro funcional.** Criterio `name=value` aplicado al Custom Header.
+
+   ![Evidencia 18-30 - Filtro por Custom Header](images/tema-18/18-30-jms-configuracion-filtro-custom-header.png)
+
+   El filtro devolvió **un registro**: `LAB18-JMS-Consumidor`, `Completed`, 17:47:50, 4 ms. El productor no aparece en esta consulta porque no registra ese Custom Header en el escenario implementado.
+
+   **Evidencia 18-31 — Búsqueda funcional satisfactoria.** Resultado del filtro `OrdenId=ORD-18501`.
+
+   ![Evidencia 18-31 - Resultado por OrdenId](images/tema-18/18-31-jms-busqueda-ordenid-completed.png)
+
+6. En **Monitor → Manage Stores → Message Queues**, revisar `JMS_LAB18_JMS_Productor`. Se observaron **JMS Resources: OK**, **Usage: OK**, **State: Started**, **Access Type: Non-Exclusive**, **Entries = 0** y **Messages (0)**. No quedaron mensajes pendientes en la cola en el momento de la comprobación.
+
+   **Evidencia 18-32 — Cola vacía tras el procesamiento.** Estado final del almacenamiento JMS.
+
+   ![Evidencia 18-32 - Cola vacía](images/tema-18/18-32-jms-cola-vacia-trazabilidad-integral.png)
+
+#### Resultado esperado y validación
+
+| Control | Resultado observado |
+|---|---|
+| Publicación HTTP | `202 Accepted` |
+| MPL productor | `Completed`, 91 ms |
+| MPL consumidor | `Completed`, 4 ms |
+| Correlation ID | Coincidente en ambos MPL |
+| Predecessor ID del consumidor | Coincide con Message ID del productor |
+| Identificador funcional | `OrdenId=ORD-18501` en Custom Header del consumidor |
+| Búsqueda por Correlation ID | Dos MPL, productor y consumidor |
+| Búsqueda por Custom Header | Un MPL del consumidor |
+| Cola JMS al finalizar | `Started`, cero entradas |
+
+**Problemas encontrados:** el cuerpo HTTP de respuesta permanece binario; su causa no se determinó. No se observaron errores de publicación, consumo ni correlación en esta ejecución.
+
+**Aprendizajes:** el estado `Completed` del productor no sustituye la validación del consumidor; la correlación técnica se verifica mediante identificadores MPL y no solamente por coincidencia horaria; el Custom Header permite una búsqueda funcional por orden; la cola vacía acredita que no había mensajes pendientes al momento de la inspección, sin demostrar garantías universales de entrega exactamente una vez.
+
+**Estado final:** ✅ Completado. Evidencias 18-26 a 18-32.
 
 ## Criterios de validación y cierre
 
