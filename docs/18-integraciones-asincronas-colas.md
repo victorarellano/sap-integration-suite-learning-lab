@@ -1,6 +1,6 @@
 # 18 - Integraciones asíncronas y colas
 
-**Estado del tema:** 🟨 En curso - 18.1, 18.2 y 18.3 validados; 18.4 y 18.5 pendientes
+**Estado del tema:** 🟨 En curso - 18.1, 18.2, 18.3 y 18.4 validados; 18.5 pendiente
 **Package:** `CPI Learning Lab`
 **Inicio:** 06/11/2026
 **Fecha objetivo de cierre:** 08/11/2026 (planificación, no resultado confirmado)
@@ -54,8 +54,6 @@ El productor entrega mensajes a una infraestructura intermedia; el consumidor lo
 - Package `CPI Learning Lab` y Postman con una carpeta específica del capítulo 18.
 - Conocimientos de HTTPS Sender, headers, properties, manejo de errores, MPL y Data Store.
 - **Verificado:** JMS Resources OK, 20 colas y 6000 MB máximos visibles; productor desplegado, cola creada y publicación comprobada.
-- **Pendiente de investigación técnica para 18.4:** semántica de reintentos, cola de mensajes fallidos, confirmación y recuperación bajo error.
-- No crear ni modificar iFlows ni versiones hasta presentar la ficha de diseño y obtener aprobación expresa.
 
 ## Laboratorios
 
@@ -315,19 +313,184 @@ Los parámetros de reintento se observaron en la interfaz, **pero su comportamie
 
 **Aprendizajes:** comprobar el despliegue real, no solo la sintaxis visual del editor; usar un parser de JSON compatible con streaming; mantener el body original; correlacionar MPLs mediante identificadores técnicos y el identificador funcional `OrdenId`; verificar el vaciado de la cola tras el consumo.
 
+
 ### 18.4 - Errores, reintentos y duplicados
 
-**Estado:** ⬜ Pendiente
+**Estado:** ✅ Completado — validado el 09/11/2026.
 
-**Objetivo:** observar el comportamiento real ante fallos y diferenciar recuperación de idempotencia.
+**Objetivo:** comprobar la persistencia del mensaje JMS ante un fallo del consumidor, los reintentos automáticos y manuales, la recuperación posterior a una corrección controlada y la ausencia de deduplicación funcional en el escenario implementado.
 
-**Laboratorio paso a paso:** pendiente de confirmar la semántica del adaptador y la cola.
+**Conceptos:** JMS desacopla la aceptación de un mensaje de su procesamiento. Un fallo del consumidor puede dar lugar a reintentos sin nueva publicación. El identificador técnico del mensaje no equivale al identificador funcional de una orden; la idempotencia requiere un control explícito.
 
-**Resultado esperado:** pruebas controladas con resultados registrados, incluidos los límites del entorno.
+**Prerrequisitos:** laboratorios 18.1–18.3 completados; iFlows `LAB18-JMS-Productor` y `LAB18-JMS-Consumidor`; cola `JMS_LAB18_JMS_Productor`; Postman y acceso a Monitor. Se guardó la versión `1.0.1` del consumidor como punto de retorno antes de las pruebas. El consumidor se restauró posteriormente con el script original, según confirmación de la ejecución del laboratorio.
 
-**Validación y evidencias:** pendientes.
+**Arquitectura del escenario:**
 
-**Problemas encontrados y aprendizajes:** pendientes.
+```mermaid
+flowchart LR
+  P["Postman"] --> A["LAB18-JMS-Productor"]
+  A --> Q[("JMS_LAB18_JMS_Productor")]
+  Q --> C["LAB18-JMS-Consumidor"]
+  C --> V{"¿ordenId válido?"}
+  V -->|Sí| M["MPL Completed"]
+  V -->|No| R["Excepción Groovy"]
+  R -. "Reintento JMS" .-> Q
+```
+
+#### 18.4.1 — Error controlado por ausencia de `ordenId`
+
+1. Verificar en Monitor el despliegue del consumidor y su asociación a `JMS_LAB18_JMS_Productor`. La versión `1.0.1` figuró desplegada el 09/11/2026 a las 16:39:05.
+
+   **Evidencia 18-15 — Consumidor operativo antes del error.** Estado de despliegue satisfactorio y cola JMS configurada.
+
+   ![Evidencia 18-15 - Consumidor previo al error](images/tema-18/18-15-jms-consumidor-estado-previo-error.png)
+
+2. Duplicar la petición positiva en la carpeta Postman `18 - Integraciones asíncronas y colas` y nombrarla `18.4 - Orden sin ordenId - Error controlado`. Publicar una sola vez:
+
+   ```json
+   {
+     "cliente": "CLI-18401",
+     "monto": 15000,
+     "moneda": "CLP",
+     "estado": "PENDIENTE"
+   }
+   ```
+
+   Postman devolvió `202 Accepted`; el cuerpo HTTP continuó siendo binario, hallazgo ya registrado en KBA y cuya causa no fue confirmada. La aceptación HTTP no equivale a un consumo satisfactorio.
+
+   **Evidencia 18-16 — Publicación HTTP del mensaje sin identificador.** Petición sin `ordenId` y respuesta `202`.
+
+   ![Evidencia 18-16 - Publicación sin ordenId](images/tema-18/18-16-postman-publicacion-orden-sin-id.png)
+
+3. En **Monitor → Monitor Message Processing**, verificar el productor `Completed` y el consumidor `Retry`. El MPL informó que se había iniciado un reintento automático y mostró `IllegalArgumentException: El mensaje no contiene un ordenId valido` desde `GRV_RegistraMensajeJMS.groovy`.
+
+   **Evidencia 18-17 — Error funcional y estado Retry.** El consumidor rechaza el JSON incompleto sin impedir la publicación anterior.
+
+   ![Evidencia 18-17 - Error del consumidor](images/tema-18/18-17-jms-consumidor-error-procesamiento.png)
+
+**Validación:** error funcional reproducido y reintento iniciado; no se confundió el estado `Completed` del productor con el resultado del consumidor.
+
+#### 18.4.2 — Reintentos y configuración del adaptador JMS Sender
+
+1. En **Monitor → Manage Stores → Message Queues**, comprobar que la cola permanecía `Started` con **una entrada** `Failed`, `Retry Count = 3` y `Next Retry On = 09/11/2026 16:48:42`.
+
+   **Evidencia 18-18 — Mensaje retenido con reintentos.** Entrada fallida conservada y contador de intentos.
+
+   ![Evidencia 18-18 - Reintentos JMS](images/tema-18/18-18-jms-cola-mensaje-reintentos.png)
+
+2. Actualizar Monitor tras el siguiente intento. El contador pasó a **4** y `Next Retry On` a **16:56:42**. La diferencia respecto de la hora anterior programada fue de **8 minutos**.
+
+   **Evidencia 18-19 — Evolución del intervalo.** Se observa el aumento del contador y el próximo reintento.
+
+   ![Evidencia 18-19 - Evolución de reintentos](images/tema-18/18-19-jms-evolucion-reintentos.png)
+
+3. En una comprobación posterior, la entrada seguía `Failed` con `Retry Count = 5` y próximo reintento a las **17:12:42**; respecto de 16:56:42, la separación programada aumentó a **16 minutos**. El MPL aún mostraba el error anterior porque su última actualización, a las 16:57:12, precedía al despliegue del Groovy corregido a las 16:58:08. No se interpretó ese MPL como prueba de fallo del nuevo código.
+
+**Configuración y comportamiento de las cuatro propiedades JMS:**
+
+| Propiedad | Configuración | Función y límite de interpretación |
+|---|---|---|
+| `Retry Interval (in min)` | `1` | Intervalo base para programar nuevos intentos después de un fallo. Con backoff activado, no todos los intervalos son de un minuto. |
+| `Exponential Backoff` | Activado | Incrementa progresivamente la espera entre intentos fallidos. Las diferencias observadas de 8 y 16 minutos son consistentes con esta estrategia; no se midió la secuencia completa. |
+| `Maximum Retry Interval (in min)` | `60` | Limita el intervalo entre intentos. **No** limita a 60 minutos la duración total de la recuperación ni define por sí solo el número máximo de reintentos. |
+| `Dead-Letter Queue` | Activado | Protección prevista para determinados fallos graves del proceso de ejecución, como caídas repetidas del worker asociadas a un mensaje. **No** equivale a enviar automáticamente a una cola de errores cada JSON inválido o cada excepción de Groovy. |
+
+**Diferencia entre errores funcionales y DLQ.** En este laboratorio, la excepción `IllegalArgumentException` produjo estado `Retry` en MPL y entrada `Failed` en la cola original, con contador creciente. No se observó un mensaje `Blocked` ni una activación de DLQ. La documentación SAP describe la protección de DLQ ante fallos repetidos del worker; no se realizó una prueba destructiva para provocar una caída del runtime. Si se desea aislar órdenes funcionalmente inválidas, corresponde diseñar explícitamente un tratamiento de errores o una cola de negocio separada. La expiración del mensaje, configurada en el JMS Receiver del productor, es distinta de estos cuatro parámetros.
+
+**Referencia técnica:** [SAP Help — Apply the Retry Pattern with JMS Queue](https://help.sap.com/docs/integration-suite/sap-integration-suite/apply-retry-pattern-with-jms-queue).
+
+#### 18.4.3 — Recuperación controlada y Retry manual
+
+1. Se aprobó modificar temporalmente el consumidor para procesar exclusivamente el mensaje de prueba cuyo `cliente` fuera `CLI-18401`, sin relajar la validación de los demás mensajes. Se conservó un punto de retorno anterior a la modificación.
+2. En el Groovy se incorporó temporalmente la siguiente condición, manteniendo la lectura del body mediante `java.io.Reader`, la Exchange Property y el Custom Header `OrdenId`:
+
+   ```groovy
+   if (ordenId == null || ordenId.toString().trim().isEmpty()) {
+       if (json.cliente?.toString() == "CLI-18401") {
+           ordenId = "ORD-18401-RECUPERADA"
+       } else {
+           throw new IllegalArgumentException(
+               "El mensaje no contiene un ordenId valido"
+           )
+       }
+   }
+   ```
+
+   Esta asignación es **exclusivamente didáctica**: `cliente` no identifica de forma única un mensaje, y asignar un identificador artificial a una orden inválida no es una estrategia apropiada de recuperación de datos de negocio en producción.
+3. Desplegar el consumidor actualizado. Se observó la versión `1.0.1` desplegada a las **16:58:08**. Como el siguiente intento automático estaba programado para las 17:12:42, se eligió ejecutar **Retry manual** sobre la entrada `Failed`, sin volver a publicar desde Postman.
+4. En **Manage Message Queues** comprobar `Entries = 0` y `Messages (0)` después del reintento.
+
+   **Evidencia 18-20 — Cola vacía tras Retry manual.** La entrada previamente fallida dejó de figurar en la cola.
+
+   ![Evidencia 18-20 - Recuperación manual y cola vacía](images/tema-18/18-20-jms-recuperacion-retry-manual.png)
+
+5. En **Monitor Message Processing**, comprobar `LAB18-JMS-Consumidor = Completed` el **09/11/2026 a las 17:06:07**, con Custom Header `OrdenId = ORD-18401-RECUPERADA`. El MPL mostró 11 ejecuciones (*Runs*) acumuladas en el historial de ese procesamiento; no debe interpretarse esa cifra como 11 publicaciones independientes.
+
+   **Evidencia 18-21 — MPL completado tras recuperación.** Confirma el identificador asignado durante la prueba y el resultado exitoso.
+
+   ![Evidencia 18-21 - MPL recuperación completada](images/tema-18/18-21-jms-recuperacion-mpl-completed.png)
+
+6. Restaurar el script original, retirando la excepción para `CLI-18401`. El usuario confirmó la restauración del consumidor. La verificación de un despliegue posterior de la versión restaurada no se documentó con una captura específica; el procesamiento positivo de 18.4.4 verificó que el consumidor seguía operativo, pero no prueba por sí solo la ausencia de la condición temporal en el código desplegado.
+
+**Resultado y validación:** recuperación **manual** comprobada, sin republicar el mensaje, con MPL `Completed` y cola vacía. Los reintentos **automáticos** se comprobaron en 18.4.2; no se atribuye la recuperación exitosa a un reintento automático.
+
+#### 18.4.4 — Publicaciones duplicadas e idempotencia
+
+1. Reutilizar el productor y el consumidor sin agregar Data Store ni Idempotent Process Call. En Postman, crear la petición `18.4 - Orden duplicada - Idempotencia` con:
+
+   ```json
+   {
+     "ordenId": "ORD-18402",
+     "cliente": "CLI-18402",
+     "monto": 25000,
+     "moneda": "CLP",
+     "estado": "PENDIENTE"
+   }
+   ```
+
+2. Publicar la orden una primera vez y verificar HTTP `202 Accepted`.
+
+   **Evidencia 18-22 — Primera publicación de ORD-18402.** Aceptación HTTP del primer mensaje.
+
+   ![Evidencia 18-22 - Primera publicación](images/tema-18/18-22-jms-primera-publicacion-orden-18402.png)
+
+3. Verificar en Monitor que productor y consumidor finalizaron `Completed` a las **17:24:04**. El consumidor registró `OrdenId = ORD-18402`, duración **10 ms** y Message ID `AGryK-TY8FYwOLcV-YiolkVIH7gf`.
+
+   **Evidencia 18-23 — Primer consumo.** Identificador técnico y funcional de la primera ejecución.
+
+   ![Evidencia 18-23 - Primer consumo](images/tema-18/18-23-jms-primer-consumo-orden-18402.png)
+
+4. Publicar **una segunda vez** el mismo JSON; Postman volvió a mostrar `202 Accepted`.
+
+   **Evidencia 18-24 — Segunda publicación de ORD-18402.** Se reutiliza exactamente el mismo identificador de negocio.
+
+   ![Evidencia 18-24 - Segunda publicación](images/tema-18/18-24-jms-segunda-publicacion-orden-18402.png)
+
+5. Verificar el segundo consumo: productor y consumidor `Completed` a las **17:26:22**, `OrdenId = ORD-18402`, duración **6 ms**, Message ID `AGryLG5-UGSNwseR2ACbL6Kri5Fp`.
+
+   **Evidencia 18-25 — Segundo consumo.** El identificador técnico difiere del primer consumo aunque `OrdenId` es idéntico.
+
+   ![Evidencia 18-25 - Segundo consumo](images/tema-18/18-25-jms-segundo-consumo-orden-18402.png)
+
+**Comparación verificada:**
+
+| Indicador | Primera publicación | Segunda publicación |
+|---|---|---|
+| OrdenId | `ORD-18402` | `ORD-18402` |
+| Productor | `Completed` | `Completed` |
+| Consumidor | `Completed` | `Completed` |
+| Hora de finalización | 17:24:04 | 17:26:22 |
+| Tiempo de consumidor | 10 ms | 6 ms |
+| Message ID del consumidor | `AGryK-TY8FYwOLcV-YiolkVIH7gf` | `AGryLG5-UGSNwseR2ACbL6Kri5Fp` |
+
+**Resultado esperado y validación:** se comprobaron dos procesamientos técnicos independientes de una misma orden funcional. El consumidor de este laboratorio no implementa deduplicación; ello no constituye un defecto de JMS. La idempotencia funcional, ya estudiada en el capítulo 17 mediante Idempotent Process Call y Data Store, debe diseñarse explícitamente cuando el negocio requiera evitar efectos duplicados. No se repitió esa implementación en el capítulo 18.
+
+**Problemas encontrados:** el error de negocio sin `ordenId` fue deliberado y se recuperó; la respuesta HTTP binaria continúa como hallazgo abierto ya registrado en KBA. No se verificó una activación real de DLQ, ni se probó un sistema receptor con efectos persistentes.
+
+**Aprendizajes:** distinguir publicación y consumo; interpretar `Retry` (MPL) frente a `Failed` (entrada JMS); diferenciar reintento automático de Retry manual; no confundir el máximo intervalo de espera con el plazo total; separar protección DLQ de errores funcionales; reconocer que identificadores técnicos distintos pueden compartir el mismo identificador de negocio.
+
+**Estado final del laboratorio:** ✅ Completado. Evidencias 18-15 a 18-25. El capítulo 18 continúa 🟨 En curso hasta validar 18.5.
+
 
 ### 18.5 - Monitorización y validación integral
 
@@ -346,7 +509,6 @@ Los parámetros de reintento se observaron en la interfaz, **pero su comportamie
 ## Criterios de validación y cierre
 
 Cada laboratorio solo pasará a `✅ Completado` con evidencia práctica que respalde su resultado. Los conceptos explicados sin comprobación conservarán `🟦 Revisado`; los bloqueos reales se registrarán como `⛔ Bloqueado`. Las evidencias usarán numeración correlativa `18-01`, `18-02`, etc., asignada antes de solicitar cada captura, con título y descripción junto al paso correspondiente.
-Se realizó el primer corte documental tras 18.1 y 18.2; el segundo corte se preparó al finalizar la jornada tras 18.3, antes de iniciar 18.4. Al cierre se actualizarán el Markdown del capítulo, el fragmento del README y, si corresponde, `docs/kba-y-hallazgos.md`. El usuario publicará los archivos en GitHub.
 
 ## Referencias
 
