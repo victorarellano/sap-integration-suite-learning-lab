@@ -156,11 +156,97 @@ No afirmar que la imagen está incorporada al repositorio hasta comprobar que el
 
 ## 6. iFlows, cambios y versionado
 
+### 6.1. Reglas generales
+
 - Antes de crear o reutilizar un iFlow, revisar los artefactos existentes.
 - Informar previamente cualquier modificación de un iFlow existente, creación de versión o cambio que pueda afectar laboratorios anteriores.
 - Explicar el motivo técnico de cada decisión de diseño y señalar las alternativas nativas cuando corresponda.
-- Diferenciar claramente **Save**, **Deploy** y la versión de diseño/runtime cuando sean relevantes para la validación.
-- No ejecutar cambios ni despliegues no acordados.
+- Diferenciar claramente **Save**, **Save as Version**, **Deploy** y la versión de diseño/runtime cuando sean relevantes para la validación.
+- No ejecutar cambios, versiones ni despliegues no acordados.
+- Mantener una relación identificable entre los iFlows, sus versiones y los laboratorios del curso.
+
+### 6.2. Creación y versionado inicial de un iFlow
+
+Todo iFlow nuevo deberá contar con una versión numerada antes de comenzar su configuración y las pruebas del laboratorio.
+
+Procedimiento:
+
+1. Identificar el capítulo, laboratorio y objetivo de integración.
+2. Crear el iFlow dentro del paquete correspondiente.
+3. Guardar el artefacto mediante `Save`.
+4. Crear una versión numerada mediante `Save as Version`.
+5. Utilizar `1.0.0` como versión inicial cuando corresponda a un artefacto nuevo.
+6. Registrar un comentario descriptivo que identifique el laboratorio y el propósito del iFlow.
+7. Comprobar que el artefacto aparezca con una versión numerada en el listado del paquete.
+
+La versión inicial representa el punto de partida del desarrollo y no constituye evidencia de funcionamiento ni de validación práctica.
+
+### 6.3. Desarrollo y modificaciones
+
+Durante la implementación de los laboratorios:
+
+- Utilizar `Save` y `Deploy` según corresponda, sin generar versiones numeradas por cada ajuste intermedio.
+- Antes de modificar un iFlow existente, revisar su versión actual y evaluar el impacto sobre los laboratorios anteriores.
+- Antes de crear una nueva versión, informar al usuario y esperar confirmación.
+- Crear versiones intermedias únicamente cuando representen estados relevantes que deban conservarse, como puntos de recuperación o cambios funcionales significativos.
+- No utilizar el versionado como sustituto de las pruebas funcionales.
+- Mantener las versiones anteriores disponibles para facilitar la trazabilidad y recuperación.
+
+### 6.4. Versionado al finalizar un laboratorio
+
+Una vez completadas las pruebas y verificadas las evidencias prácticas:
+
+1. Revisar el estado del iFlow en Design.
+2. Comprobar si existen modificaciones en `Draft` posteriores a la última versión numerada.
+3. Si el Draft representa el resultado validado, crear una nueva versión mediante `Save as Version`, previa confirmación del usuario.
+4. Registrar un comentario descriptivo que identifique el laboratorio y los cambios incorporados.
+5. Verificar que el artefacto aparezca con la versión numerada correspondiente en el listado del paquete.
+6. Comprobar por separado la versión y el estado del artefacto desplegado en Monitor.
+7. Confirmar que el resultado funcional validado continúa disponible.
+
+No crear versiones adicionales cuando el artefacto ya tenga una versión numerada correspondiente al resultado validado y no existan cambios pendientes.
+
+No realizar un nuevo despliegue únicamente por haber creado una versión numerada.
+
+### 6.5. Diferencia entre diseño, versionado y runtime
+
+Cloud Integration mantiene separados el estado de diseño y el estado de ejecución de los artefactos.
+
+- **Save:** guarda los cambios de diseño, sin crear una versión numerada.
+- **Save as Version:** registra una versión numerada del artefacto.
+- **Deploy:** despliega el contenido del artefacto en el runtime.
+- **Draft:** identifica un estado de diseño no registrado como versión numerada.
+- **Started:** indica que el artefacto desplegado está iniciado en el runtime.
+
+Un iFlow puede encontrarse en estado `Draft` en Design y mantener una versión numerada desplegada y ejecutándose en Monitor.
+
+Un despliegue correcto no garantiza que el artefacto haya quedado registrado como una versión numerada.
+
+La creación de una versión numerada no implica automáticamente un nuevo despliegue.
+
+### 6.6. Control de Draft y exportación del paquete
+
+Para evitar que los artefactos en estado `Draft` impidan la exportación del paquete, se aplicarán las siguientes reglas:
+
+1. Al finalizar cada laboratorio, verificar que los iFlows utilizados queden registrados en versiones numeradas cuando corresponda conservar su resultado.
+2. No dejar modificaciones pendientes en Draft sin identificar su propósito y determinar si deben conservarse.
+3. Antes de cerrar un capítulo, revisar todos los artefactos del paquete compartido `CPI Learning Lab`, incluyendo los pertenecientes a capítulos anteriores.
+4. Identificar y regularizar los Draft que impidan la exportación, previa revisión de su contenido y confirmación del usuario.
+5. Verificar que los iFlows requeridos mantengan su estado operativo en Monitor.
+6. Comprobar que el paquete pueda exportarse correctamente.
+
+La exportación del paquete se comprobará al finalizar cada capítulo, sin necesidad de repetirla después de cada laboratorio.
+
+Si la exportación falla, registrar el mensaje de error y diagnosticar su causa antes de realizar modificaciones.
+
+### 6.7. Reversión y recuperación de versiones
+
+- No utilizar `Revert` únicamente para eliminar un estado `Draft`.
+- Antes de recuperar una versión anterior, comprobar qué modificaciones podrían perderse.
+- Informar al usuario sobre el impacto de la reversión y solicitar confirmación.
+- Después de una reversión, verificar el contenido del diseñador y comprobar por separado el estado del runtime.
+- Registrar los problemas de versionado reproducibles en `docs/kba-y-hallazgos.md` cuando constituyan aprendizajes reutilizables.
+
 
 ## 7. Errores y hallazgos
 
@@ -211,6 +297,8 @@ Antes de dar por cerrado el capítulo:
 4. Actualizar el `README.md` y el documento del capítulo.
 5. Registrar los hallazgos reutilizables en el KBA.
 6. Confirmar qué archivos se han incorporado realmente al repositorio y cuáles quedan por subir.
+7. Revisar los artefactos del paquete compartido `CPI Learning Lab` y comprobar que no existan iFlows en estado `Draft` pendientes de regularización. Cuando corresponda, guardar una versión numerada del contenido validado, previa confirmación del usuario.
+8. Verificar que el paquete pueda exportarse correctamente. Si la exportación falla, registrar el motivo comprobado y resolverlo antes de considerar finalizado el control de exportación del capítulo.
 
 ### 9.1. Separación entre documentación técnica y documentación del proceso
 
