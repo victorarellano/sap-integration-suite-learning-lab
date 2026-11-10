@@ -112,10 +112,10 @@ secrets, tokens o service keys completas.
 autentica al cliente y debe tratarse como secreto. Los access tokens
 también deben ocultarse aunque sean temporales.
 
-## KBA-LAB-006 — Diferencia entre Service Instance y runtime de Cloud Integration
+## KBA-LAB-006 - Diferencia entre Service Instance y runtime de Cloud Integration
 
-**Origen:** Tema 00 — Arquitectura de SAP BTP y entorno Cloud Foundry
-**Estado:** Resuelto — Aclaración conceptual
+**Origen:** Tema 00 - Arquitectura de SAP BTP y entorno Cloud Foundry
+**Estado:** Resuelto - Aclaración conceptual
 **Entorno:** SAP BTP Trial, AWS US East (VA), Cloud Foundry, SAP Integration Suite
 
 ### 1. Síntomas y observaciones
@@ -200,13 +200,13 @@ La instancia representa un recurso del servicio, mientras que Cloud Integration 
 
 ### Referencias
 
-- [SAP Business Technology Platform — SAP Help Portal](https://help.sap.com/docs/btp)
-- [SAP Integration Suite — SAP Help Portal](https://help.sap.com/docs/integration-suite)
+- [SAP Business Technology Platform - SAP Help Portal](https://help.sap.com/docs/btp)
+- [SAP Integration Suite - SAP Help Portal](https://help.sap.com/docs/integration-suite)
 
-**Relacionado con:** Tema 00 — Arquitectura de SAP BTP y entorno Cloud Foundry; Tema 03 — Primer iFlow HTTP + OAuth Client Credentials.
+**Relacionado con:** Tema 00 - Arquitectura de SAP BTP y entorno Cloud Foundry; Tema 03 - Primer iFlow HTTP + OAuth Client Credentials.
 
 
-## KBA — `Premature end of file` al ejecutar Message Mapping por HTTPS
+## KBA - `Premature end of file` al ejecutar Message Mapping por HTTPS
 
 **Contexto:** Laboratorio 07.2, iFlow `Empleado Mapping HTTP`, mapping `MM_Empleado_Trabajador`.
 
@@ -221,9 +221,9 @@ La instancia representa un recurso del servicio, mientras que Cloud Integration 
 **Evidencias:** `docs/images/tema-07/07-2-postman-error-http-500.png` y `docs/images/tema-07/07-2-postman-transformacion-correcta.png`.
 
 
-## KBA-LAB-007 — `java.lang.String.call()` en Groovy MarkupBuilder
+## KBA-LAB-007 - `java.lang.String.call()` en Groovy MarkupBuilder
 
-**Origen:** Laboratorio 08.2 — Content Enricher y Request-Reply.
+**Origen:** Laboratorio 08.2 - Content Enricher y Request-Reply.
 **Estado:** Resuelto y validado con Postman.
 
 **Síntoma:** el iFlow `Request Reply` se encontraba desplegado, pero el procesamiento del mensaje falló. En Monitor Message Processing se observó:
@@ -245,9 +245,9 @@ No signature of method: java.lang.String.call() is applicable for argument types
 
 ---
 
-## KBA-LAB-008 — Errores de compatibilidad de Groovy Script v2 y procesamiento XML
+## KBA-LAB-008 - Errores de compatibilidad de Groovy Script v2 y procesamiento XML
 
-**Origen:** Laboratorio 08.2 — Content Enricher y Request-Reply.
+**Origen:** Laboratorio 08.2 - Content Enricher y Request-Reply.
 **Artefacto:** `Request Reply`.
 **Recurso:** `GRV_Enriquecer_Solicitud.groovy`.
 **Estado:** Resuelto y validado con Postman (21-10-2026).
@@ -361,14 +361,14 @@ La respuesta valida el recorrido funcional de la solicitud y la construcción de
 
 **Evidencia:** capturas del editor Groovy, *Upgrade Readiness Checks*, *Monitor Message Processing*, despliegue de la versión 1.0.2 y respuesta HTTP 200 en Postman del laboratorio 08.2. Las rutas de estas capturas no se especifican porque no se ha confirmado su nombre definitivo en el repositorio.
 
-**Relacionado con:** KBA-LAB-007 — `java.lang.String.call()` en Groovy MarkupBuilder; Laboratorio 08.2 — Content Enricher y Request-Reply.
+**Relacionado con:** KBA-LAB-007 - `java.lang.String.call()` en Groovy MarkupBuilder; Laboratorio 08.2 - Content Enricher y Request-Reply.
 
-## KBA-LAB-009 — 502 Bad Gateway por header Content/Type mal formado
+## KBA-LAB-009 - 502 Bad Gateway por header Content/Type mal formado
 
-### Hallazgo — Router no compatible con Gather en el diseño probado
+### Hallazgo - Router no compatible con Gather en el diseño probado
 
 **Fecha:** 2026-10-23
-**Módulo:** 10.3 — Gather
+**Módulo:** 10.3 - Gather
 **Estado:** Solución validada en laboratorio
 
 ### Síntoma
@@ -402,9 +402,9 @@ Hallazgo observado en el editor y runtime del tenant utilizado para el laborator
 Consultar `10-16-gather-router-incompatible.png`, `10-17-gather-arquitectura-corregida.png`, `10-18-gather-postman-resultado.png` y `10-19-gather-trace-consolidacion.png` en el documento del módulo 10.
 
 
-## KBA-LAB-010 — 502 Bad Gateway por header Content/Type mal formado
+## KBA-LAB-010 - 502 Bad Gateway por header Content/Type mal formado
 
-**Origen:** Tema 11.4 — `LAB11_04_JSON_XML_Roundtrip`
+**Origen:** Tema 11.4 - `LAB11_04_JSON_XML_Roundtrip`
 **Estado:** Resuelto y validado (26-10-2026).
 
 **Síntoma:** Postman devolvía `502 Bad Gateway`, mientras Monitor Message Processing registraba el mensaje como `Completed`.
@@ -420,9 +420,9 @@ Consultar `10-16-gather-router-incompatible.png`, `10-17-gather-arquitectura-cor
 **Alcance:** hallazgo confirmado en el laboratorio 11.4; no implica un defecto general del runtime ni de la región.
 
 
-## KBA-LAB-011 — Header HTTP personalizado no disponible en Groovy sin Allowed Headers
+## KBA-LAB-011 - Header HTTP personalizado no disponible en Groovy sin Allowed Headers
 
-**Origen:** Laboratorio 12.2 — Headers, Properties y Body.
+**Origen:** Laboratorio 12.2 - Headers, Properties y Body.
 **Estado:** Resuelto y validado mediante Postman (27-10-2026).
 **Artefacto:** `LAB12_02_Groovy_Headers_Properties_Body`.
 
@@ -438,9 +438,9 @@ Consultar `10-16-gather-router-incompatible.png`, `10-17-gather-arquitectura-cor
 
 **Evidencia:** `docs/images/tema-12/12-21-postman-headers-properties-body-validado.png` y `docs/images/tema-12/12-22-postman-tests-headers-properties-body.png`.
 
-## KBA-LAB-012 — Error de sintaxis Groovy no advertido en el editor antes del despliegue
+## KBA-LAB-012 - Error de sintaxis Groovy no advertido en el editor antes del despliegue
 
-**Origen:** Capítulo 13, laboratorio 13.4 — Errores funcionales y técnicos.
+**Origen:** Capítulo 13, laboratorio 13.4 - Errores funcionales y técnicos.
 **Artefacto:** `LAB13_01_Error_No_Controlado`.
 **Recurso:** `GRV_ProvocarError_v2.groovy`.
 **Estado:** Resuelto y validado mediante Postman (29-10-2026).
@@ -451,13 +451,13 @@ El editor del iFlow no mostró una advertencia visible sobre una instrucción Gr
 
 ### Código observado
 
-**Antes — instrucción incorrecta:**
+**Antes - instrucción incorrecta:**
 
 ```groovy
 def body = new JsonSlurper().parse(message.getBody(java.io.Reader)
 ```
 
-**Después — instrucción corregida:**
+**Después - instrucción corregida:**
 
 ```groovy
 def body = new JsonSlurper().parse(message.getBody(java.io.Reader))
@@ -507,11 +507,11 @@ El hallazgo describe exclusivamente el comportamiento observado en este laborato
 
 **Estado:** causa pendiente de confirmar.
 
-## KBA — Error HTTP 404 por configuración incorrecta de Token Service URL en OAuth2 Client Credentials
+## KBA - Error HTTP 404 por configuración incorrecta de Token Service URL en OAuth2 Client Credentials
 
-**Componente:** SAP Integration Suite — Cloud Integration
+**Componente:** SAP Integration Suite - Cloud Integration
 **Ámbito:** HTTP Receiver Adapter / OAuth2 Client Credentials / Security Material
-**Laboratorio relacionado:** Tema 15 — Seguridad
+**Laboratorio relacionado:** Tema 15 - Seguridad
 **Estado:** Resuelto y validado
 
 ### 1. Síntoma
@@ -598,7 +598,7 @@ No debe generalizarse que todos los errores HTTP 404 en este adaptador tienen la
 **Nota de seguridad:** no incorporar capturas de Service Keys con secretos visibles ni documentar valores reales de `clientsecret`.
 
 
-## KBA — Alcance de Connectivity Tests TLS y certificado de cliente (15.5–15.6)
+## KBA - Alcance de Connectivity Tests TLS y certificado de cliente (15.5–15.6)
 
 **Síntoma:** la prueba TLS a `httpbin.org:443` con alias `lab15_mtls_client` informó `client certificate was not used`. En `certauth.cryptomix.com:443`, la prueba con alias informó conexión exitosa y `Client Certificate Alias: lab15_mtls_client`; la prueba TLS sin alias también tuvo éxito. Un navegador sin certificado recibió `No TLS client certificate presented`.
 
@@ -610,7 +610,7 @@ No debe generalizarse que todos los errores HTTP 404 en este adaptador tienen la
 
 **Evidencias:** 15-35 a 15-38 del capítulo 15.
 
-## KBA-LAB-016 — Diferencia entre nombre y valor predeterminado al externalizar HTTPS Sender
+## KBA-LAB-016 - Diferencia entre nombre y valor predeterminado al externalizar HTTPS Sender
 
 **Origen:** capítulo 16, laboratorio 16.4.
 **Artefacto:** `LAB16-Externalized Parameters`.
@@ -636,7 +636,7 @@ La petición GET a `/http/lab16/parameters-v2` devolvió HTTP `200 OK` y el JSON
 
 En este laboratorio, la distinción entre **identificador** y **valor** fue esencial para evitar una dirección publicada incorrecta. No se atribuye el comportamiento a un defecto de SAP ni se generaliza a otros adaptadores sin pruebas.
 
-## KBA — Data Store: entrada existente no accesible desde un segundo iFlow con visibilidad Global
+## KBA - Data Store: entrada existente no accesible desde un segundo iFlow con visibilidad Global
 
 **Origen:** Capítulo 17, laboratorio 17.2.
 **Estado:** Diagnóstico y alternativa de configuración validados (04/11/2026).
@@ -669,7 +669,7 @@ El nombre del Data Store no basta para identificar el ámbito de lectura: compro
 **Evidencias:** `17-12-mpl-get-entrada-no-encontrada.png`, `17-13-monitor-data-store-entrada-existente.png`, `17-14-mpl-write-entrada-duplicada.png`, `17-17-monitor-data-store-global-orden-17002.png` y `17-18-postman-data-store-get-global-orden-17002.png`, referenciadas en el capítulo 17.
 
 
-## KBA — Data Store Select: error de parseo XML al seleccionar una entrada JSON (17.3)
+## KBA - Data Store Select: error de parseo XML al seleccionar una entrada JSON (17.3)
 
 **Ámbito:** SAP Cloud Integration, Data Store Select.
 **Estado:** escenario corregido y validado el 05/11/2026.
@@ -707,7 +707,7 @@ Ante un error de parseo en Select, revisar el payload real de la entrada identif
 
 ---
 
-## KBA — Restricción entre umbral de alerta y expiración en Data Store Write (17.4)
+## KBA - Restricción entre umbral de alerta y expiración en Data Store Write (17.4)
 
 **Ámbito:** SAP Cloud Integration, Data Store Write.
 **Estado:** configuración corregida y fechas validadas el 05/11/2026.
@@ -734,9 +734,9 @@ Se validaron las fechas calculadas y la coexistencia de entradas con configuraci
 
 **Evidencias:** `17-44-monitor-data-store-fechas-retencion-expiracion.png` y `17-45-monitor-comparacion-retencion-expiracion.png`.
 
-## KBA — Data Store de negocio e historial interno de Idempotent Process Call
+## KBA - Data Store de negocio e historial interno de Idempotent Process Call
 
-**Origen:** Capítulo 17.5 — Idempotencia de órdenes y recuperación ante errores.
+**Origen:** Capítulo 17.5 - Idempotencia de órdenes y recuperación ante errores.
 **Artefactos:** `LAB17-Ordenes-Idempotencia`, `LAB17-Data Store`.
 **Estado:** Comportamientos reproducidos y validados el 06/11/2026.
 
@@ -768,9 +768,9 @@ Los resultados corresponden al escenario ejecutado en SAP Cloud Integration. No 
 
 **Evidencias:** `17-55` a `17-59`, junto a la validación de duplicado `17-51` y `17-52` del capítulo 17.
 
-**Referencias:** [SAP — Define Idempotent Process Call](https://help.sap.com/docs/cloud-integration/sap-cloud-integration/define-idempotent-process-call); [SAP — Define Data Store Write Operations](https://help.sap.com/docs/integration-suite/isuite-integrations-and-apis/define-data-store-write-operations).
+**Referencias:** [SAP - Define Idempotent Process Call](https://help.sap.com/docs/cloud-integration/sap-cloud-integration/define-idempotent-process-call); [SAP - Define Data Store Write Operations](https://help.sap.com/docs/integration-suite/isuite-integrations-and-apis/define-data-store-write-operations).
 
-## KBA — Validar la conexión real del Idempotent Process Call y la evaluación del Body
+## KBA - Validar la conexión real del Idempotent Process Call y la evaluación del Body
 
 **Origen:** Capítulo 17.5. **Estado:** Resuelto y validado.
 
@@ -788,7 +788,7 @@ La representación visual no garantizaba que el paso estuviera insertado en el f
 Verificar la secuencia efectiva de pasos en Trace y no deducir ejecución únicamente de la posición de un icono en el editor. Diferenciar texto literal de expresión evaluada en Content Modifier. Ambos hallazgos fueron comprobados en este iFlow; no se atribuyen a una falla general del editor o del runtime.
 
 
-## KBA — Respuesta HTTP binaria después de publicar correctamente en JMS
+## KBA - Respuesta HTTP binaria después de publicar correctamente en JMS
 
 **Origen:** 18.2. **Estado:** diagnóstico abierto.
 
@@ -805,7 +805,7 @@ La cola `JMS_LAB18_JMS_Productor` quedó `Started` con una entrada `Waiting`; su
 No se aplicó ninguna modificación: la publicación JMS fue validada. Si se requiere un cuerpo HTTP legible, deberá investigarse la generación de la respuesta y contrastarse con documentación oficial antes de alterar el diseño. No atribuir el síntoma a la compresión sin una prueba específica.
 
 
-## KBA — Expresión `jsonpath` no reconocida al iniciar consumidor JMS
+## KBA - Expresión `jsonpath` no reconocida al iniciar consumidor JMS
 
 **Origen:** laboratorio 18.3, `LAB18-JMS-Consumidor` (06/11/2026). **Estado:** resuelto y validado en este escenario.
 
@@ -836,3 +836,20 @@ El script también validó la presencia de `ordenId` y lo registró en el MPL co
 Tras guardar y desplegar, el MPL de `LAB18-JMS-Consumidor` mostró `Completed` (836 ms), Custom Header `OrdenId = ORD-18001` y correlación con el productor. La cola quedó con cero entradas. **La corrección está validada para este iFlow y esta expresión; no implica que toda variante de JSONPath sea incompatible con SAP Cloud Integration.**
 
 **Evidencias:** `18-12-jms-consumidor-error-jsonpath.png`, `18-13-jms-consumidor-mpl-completed.png`, `18-14-jms-cola-vacia-despues-consumo.png`.
+
+
+## KBA - Inserción de Exception Subprocess no persistía en el editor de CPI
+
+**Origen:** laboratorio 19.5, `LAB19_Consumo_API_REST` (10/11/2026). **Estado:** resuelto en el escenario observado; causa raíz no confirmada.
+
+### Síntoma
+
+Al intentar insertar un Exception Subprocess en el Integration Process, el editor mostraba temporalmente un rectángulo durante la operación de arrastre, pero el elemento desaparecía al soltarlo. No se consiguió conservar el subproceso en el diagrama durante esos intentos.
+
+### Diagnóstico y solución aplicada
+
+Se recargó la página del editor. Después de la recarga, fue posible insertar el Exception Subprocess dentro del Integration Process y completar su configuración. La ejecución posterior validó el tratamiento de errores mediante Postman y MPL.
+
+### Alcance y aprendizaje
+
+La recarga de la página resolvió el síntoma en esta sesión. **No se determinó la causa técnica** y no existe evidencia suficiente para atribuirlo a un defecto general de SAP CPI, al navegador, al tenant o al runtime. Antes de reconstruir artefactos o modificar un diseño funcional por un problema de interacción del editor, comprobar si una recarga permite repetir la operación y validar luego el resultado guardado.

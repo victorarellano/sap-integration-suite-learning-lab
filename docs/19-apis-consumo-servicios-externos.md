@@ -1,6 +1,6 @@
 ﻿# 19 - APIs y consumo de servicios externos
 
-**Estado del tema:** 🟨 En curso - 19.1, 19.2, 19.3 y 19.4 completados
+**Estado del tema:** ✅ Completado - laboratorios 19.1 a 19.6 validados
 **Package:** `CPI Learning Lab`
 **Inicio:** 10/11/2026
 
@@ -13,9 +13,9 @@ Comprender los contratos HTTP de servicios REST y consumir una API pública desd
 - Interpretar métodos HTTP, URL, headers, códigos de estado y representaciones JSON.
 - Comprobar directamente en Postman una respuesta positiva y una negativa de una API pública.
 - Implementar y validar un iFlow CPI que consulte un servicio REST externo.
-- Parametrización de solicitudes y autenticación saliente; posteriormente, errores HTTP y escenario integrador.
+- Parametrización de solicitudes, autenticación saliente, manejo de errores HTTP y timeout controlado.
 
-**Fuera de alcance:** OData (capítulo 20) y administración de APIs con API Management. Los mecanismos de errores HTTP en CPI se estudiarán en 19.5.
+**Fuera de alcance:** OData (capítulo 20) y administración de APIs con API Management. El capítulo incorpora errores HTTP y timeout del HTTP Receiver en 19.5 y 19.6.
 
 ## Plan de laboratorios y tiempos estimados
 
@@ -26,7 +26,7 @@ Comprender los contratos HTTP de servicios REST y consumir una API pública desd
 | 19.3 | Parámetros dinámicos, headers y JSON | Consultas con parámetros variables y respuestas comprobadas | 50 min |
 | 19.4 | Autenticación y configuración segura | Consumo autenticado validado | 55 min |
 | 19.5 | Errores HTTP y diagnóstico | Casos negativos y comportamiento de CPI comprobados | 55 min |
-| 19.6 | Integración completa y Postman | Flujo integral comprobado | 45 min |
+| 19.6 | Resiliencia y timeout REST | TimeoutException, HTTP 504 y recuperación funcional | 45 min |
 | **Total estimado** | | | **4 h 50 min** |
 
 Las duraciones son estimaciones iniciales, no tiempos medidos. No incluyen pausas ni eventuales bloqueos del entorno.
@@ -409,9 +409,206 @@ La autenticación entrante y la saliente son independientes. El parámetro `id=2
 
 **Aprendizajes:** la autenticación de entrada no sustituye la autenticación del receptor. Security Material desacopla las credenciales del diseño. El MPL permite identificar el código HTTP real de un servicio externo aunque la respuesta final de CPI sea diferente. La restauración se validó antes de registrar la versión funcional.
 
+## 19.5 - Manejo de errores HTTP y diagnóstico
+
+**Estado:** ✅ Completado
+
+### Objetivo y conceptos
+
+Convertir fallos de validación y del servicio externo en respuestas HTTP controladas, distinguiendo el código entregado al consumidor de la excepción original registrada en el Message Processing Log (MPL).
+
+**Prerrequisitos:** laboratorios 19.1–19.4 completados; `LAB19_Consumo_API_REST` desplegado; validación del parámetro `id` y autenticación Basic saliente operativas.
+
+### Arquitectura implementada
+
+```mermaid
+flowchart LR
+    P["Postman / OAuth"] --> S["HTTPS Sender"]
+    S --> V["Validar ID / Groovy"]
+    V --> R["Request-Reply / HTTP Receiver"]
+    R --> H["HTTPBin / Basic Auth"]
+    V -. "Excepción" .-> E["Exception Subprocess"]
+    R -. "Excepción" .-> E
+    E --> C["Clasificar Error HTTP / Groovy"]
+    C --> M["Preparar Respuesta Error HTTP / Content Modifier"]
+    M --> F["Message End"]
+```
+
+### Configuración y procedimiento
+
+1. Conservar el proceso principal: `Obtener ID Recurso` → `Validar ID Recurso` → `Consultar API REST`. Incorporar un **Exception Subprocess** dentro del Integration Process con `Error Start 1` → Groovy `Clasificar Error HTTP` → Content Modifier `Preparar Respuesta Error HTTP` → `End 1` (Message End). El subproceso captura excepciones y devuelve una respuesta al consumidor sin propagar un fallo sin controlar.
+2. Mantener en el HTTP Receiver **Throw Exception On Failure** activado. Para el destino autenticado, utilizar `https://httpbin.org/basic-auth/lab19/demo19`, método `GET`, autenticación `Basic` y Security Material `LAB19_HTTPBIN_BASIC`.
+3. Crear el recurso `GRV_Clasificar_Error_HTTP.groovy`. Recuperar la excepción desde `CamelExceptionCaught` y recorrer la cadena de causas hasta 10 niveles. Clasificar `IllegalArgumentException` como HTTP 400 y `AhcOperationFailedException` como HTTP 502. Mantener HTTP 500 como respuesta predeterminada para errores no identificados. Guardar los valores en las Exchange Properties `httpErrorCode`, `errorCode` y `errorMessage`.
+4. Configurar `Preparar Respuesta Error HTTP` para devolver un JSON controlado usando las propiedades del clasificador. Encabezados: `CamelHttpResponseCode` como expresión `${property.httpErrorCode}` (tipo `java.lang.Integer`) y `Content-Type` constante `application/json`. Body como **Expression**:
+
+   ```json
+   {
+     "error": {
+       "code": "${property.errorCode}",
+       "message": "${property.errorMessage}"
+     }
+   }
+   ```
+
+   La respuesta no incorpora detalles internos de la excepción ni credenciales. El MPL conserva la causa técnica original.
+5. Ejecutar desde Postman una solicitud GET sin parámetro `id`. Resultado: HTTP **400**, `INVALID_REQUEST` y mensaje `El parametro id es obligatorio o invalido.`; MPL `Completed`, con `IllegalArgumentException` como error intermedio.
+
+   **Evidencia 19-17 - Parámetro obligatorio rechazado con HTTP 400.** La respuesta pública contiene el JSON de validación.
+
+   ![Evidencia 19-17 - HTTP 400 sin id](images/tema-19/19-17-postman-http-400-id-ausente.png)
+
+   **Evidencia 19-18 - Excepción controlada y MPL Completed.** El monitor muestra que el Exception Subprocess trató el error.
+
+   ![Evidencia 19-18 - MPL HTTP 400](images/tema-19/19-18-mpl-http-400-excepcion-controlada.png)
+
+6. Ejecutar `GET ?id=abc`. Resultado: HTTP **400**, `INVALID_REQUEST`; el MPL registra `IllegalArgumentException` con el texto `El parametro id debe ser un entero positivo`.
+
+   **Evidencia 19-19 - Identificador no numérico rechazado.** Postman muestra HTTP 400 y el JSON controlado.
+
+   ![Evidencia 19-19 - HTTP 400 id inválido](images/tema-19/19-19-postman-http-400-id-invalido.png)
+
+   **Evidencia 19-20 - Causa original del identificador inválido.** El MPL conserva la excepción de validación y finaliza `Completed`.
+
+   ![Evidencia 19-20 - MPL id inválido](images/tema-19/19-20-mpl-http-400-id-invalido.png)
+
+7. Para probar un fallo del receptor, sustituir **temporalmente** el Credential Name por `LAB19_HTTPBIN_BASIC_INVALID`, guardar y desplegar sin versionar el estado de prueba. Con `GET ?id=2`, HTTPBin rechazó la autenticación con **401**. El MPL identificó `org.apache.camel.component.ahc.AhcOperationFailedException`; la respuesta controlada de CPI fue **502 Bad Gateway**, `UPSTREAM_ERROR`.
+
+   **Evidencia 19-21 - Fallo externo transformado en HTTP 502.** Postman muestra la respuesta JSON controlada.
+
+   ![Evidencia 19-21 - HTTP 502](images/tema-19/19-21-postman-http-502-servicio-externo.png)
+
+   **Evidencia 19-22 - Rechazo HTTP 401 identificado en MPL.** El log muestra `statusCode: 401` en el error del receptor, mientras el proceso finaliza `Completed`.
+
+   ![Evidencia 19-22 - HTTP 401 origen](images/tema-19/19-22-mpl-http-401-origen-error-502.png)
+
+8. Restaurar `LAB19_HTTPBIN_BASIC`, guardar y desplegar. Se comprobó nuevamente HTTP **200**, `authenticated: true`, `authorized: true`, `user: lab19`. Guardar una versión numerada del estado validado mediante **Save as Version**. No se agrega una captura duplicada de la restauración.
+
+### Resultado esperado y validación
+
+| Escenario | Resultado observado |
+|---|---|
+| Sin `id` | HTTP 400 / `INVALID_REQUEST`; MPL Completed |
+| `id=abc` | HTTP 400 / `INVALID_REQUEST`; causa `IllegalArgumentException` visible en MPL |
+| Credencial saliente inválida | HTTPBin 401; CPI HTTP 502 / `UPSTREAM_ERROR`; MPL Completed |
+| Credencial válida restaurada | HTTP 200; autenticación aceptada |
+| Versionado | Versión numerada creada y confirmada |
+
+**Problemas encontrados:** al insertar inicialmente el Exception Subprocess, el editor no conservó el elemento arrastrado. Tras recargar la página, se pudo insertar correctamente. La causa técnica no fue identificada. El análisis Upgrade Readiness advirtió sobre una importación restringida de Apache Camel; se eliminó la importación y se clasificó la excepción HTTP por su nombre de clase observado en MPL.
+
+**Aprendizajes:** un error HTTP del receptor no es lo mismo que el código HTTP que CPI devuelve al consumidor. El Exception Subprocess permite controlar el contrato público y conservar el diagnóstico en el MPL. El estado `Completed` es compatible con una respuesta HTTP 4xx/5xx controlada. La clasificación por nombre de clase evita importar una biblioteca restringida, pero depende del nombre interno de la excepción y no discrimina por sí sola el código HTTP externo.
+
+## 19.6 - Resiliencia y timeout en consumo de APIs REST
+
+**Estado:** ✅ Completado
+
+### Objetivo y conceptos
+
+Provocar un timeout controlado en el HTTP Receiver, diferenciarlo de una respuesta HTTP de error y transformarlo en una respuesta pública HTTP 504, conservando el diagnóstico original.
+
+**Prerrequisitos:** laboratorio 19.5 completado, Exception Subprocess operativo y acceso al HTTP Receiver.
+
+### Arquitectura implementada
+
+```mermaid
+flowchart LR
+    P["Postman / GET ?id=2"] --> S["CPI / HTTPS Sender"]
+    S --> V["Validación ID"]
+    V --> R["HTTP Receiver / timeout 2000 ms"]
+    R --> H["HTTPBin /delay/5"]
+    R -. "TimeoutException" .-> E["Exception Subprocess"]
+    E --> C["Clasificar Error HTTP"]
+    C --> O["HTTP 504 / UPSTREAM_TIMEOUT"]
+```
+
+### Configuración y procedimiento
+
+1. Inspeccionar el HTTP Receiver antes de modificarlo. La configuración observada tenía `Timeout (in ms) = 60000`, `Throw Exception On Failure` y `Attach Error Details on Failure` activados; `Retry on Exception` y `Retry on Error Response` desactivados. Esto permitió ejecutar la prueba sin reintentos automáticos configurados en el adaptador.
+2. Cambiar **temporalmente** el destino a `https://httpbin.org/delay/5`, autenticación `None`, método `GET` y `Timeout (in ms) = 2000`. Mantener reintentos desactivados. Guardar y desplegar. El endpoint solicita una demora mayor que el tiempo de espera configurado; el resultado efectivo se verifica en ejecución.
+3. Crear en Postman una petición independiente `19.6 - GET API REST Timeout`, con OAuth de entrada y `GET /http/lab19/api-rest?id=2`. En la primera prueba se recibió HTTP **500**, código `INTEGRATION_ERROR`, y el MPL registró `java.util.concurrent.TimeoutException: Request timeout ... after 2000 ms`; procesamiento total **2547 ms** y estado `Completed`.
+
+   **Evidencia 19-23 - Timeout antes de la clasificación específica.** Postman muestra la respuesta genérica HTTP 500.
+
+   ![Evidencia 19-23 - Timeout inicial](images/tema-19/19-23-postman-timeout-respuesta-inicial.png)
+
+   **Evidencia 19-24 - Excepción original de timeout.** El MPL identifica `TimeoutException` y el límite de 2000 ms.
+
+   ![Evidencia 19-24 - Timeout en MPL](images/tema-19/19-24-mpl-timeout-excepcion-original.png)
+
+4. Ampliar `GRV_Clasificar_Error_HTTP.groovy` para reconocer `java.util.concurrent.TimeoutException` y devolver HTTP **504**, `UPSTREAM_TIMEOUT`, mensaje `El servicio externo excedio el tiempo de espera.`. Mantener la clasificación HTTP 400, HTTP 502 y HTTP 500 predeterminada. Código final del clasificador:
+
+   ```groovy
+   import com.sap.gateway.ip.core.customdev.util.Message
+   import java.util.concurrent.TimeoutException
+
+   def Message processData(Message message) {
+       def current = message.getProperty("CamelExceptionCaught")
+       int httpCode = 500
+       String errorCode = "INTEGRATION_ERROR"
+       String errorMessage = "No fue posible procesar la solicitud."
+       int depth = 0
+
+       while (current != null && depth < 10) {
+           if (current instanceof IllegalArgumentException) {
+               httpCode = 400
+               errorCode = "INVALID_REQUEST"
+               errorMessage = "El parametro id es obligatorio o invalido."
+               break
+           }
+           if (current instanceof TimeoutException) {
+               httpCode = 504
+               errorCode = "UPSTREAM_TIMEOUT"
+               errorMessage = "El servicio externo excedio el tiempo de espera."
+               break
+           }
+           if (current.getClass().getName() ==
+                   "org.apache.camel.component.ahc.AhcOperationFailedException") {
+               httpCode = 502
+               errorCode = "UPSTREAM_ERROR"
+               errorMessage = "El servicio externo no pudo completar la solicitud."
+               break
+           }
+           current = current.getCause()
+           depth++
+       }
+
+       message.setProperty("httpErrorCode", httpCode)
+       message.setProperty("errorCode", errorCode)
+       message.setProperty("errorMessage", errorMessage)
+       return message
+   }
+   ```
+
+5. Guardar, comprobar el script y desplegar. Repetir la petición con `id=2`: Postman devolvió HTTP **504 Gateway Timeout**, código `UPSTREAM_TIMEOUT` y el mensaje esperado. El MPL conservó `java.util.concurrent.TimeoutException`, el límite de **2000 ms**, estado `Completed` y duración total **2614 ms**.
+
+   **Evidencia 19-25 - Timeout clasificado como HTTP 504.** Postman muestra el contrato de error controlado.
+
+   ![Evidencia 19-25 - HTTP 504](images/tema-19/19-25-postman-http-504-timeout-controlado.png)
+
+   **Evidencia 19-26 - Timeout original conservado en MPL.** El registro muestra `TimeoutException` y `Request timeout ... after 2000 ms`.
+
+   ![Evidencia 19-26 - MPL timeout](images/tema-19/19-26-mpl-timeout-http-504-excepcion-original.png)
+
+6. Restaurar el HTTP Receiver a `https://httpbin.org/basic-auth/lab19/demo19`, autenticación `Basic`, credencial `LAB19_HTTPBIN_BASIC`, método `GET` y timeout `60000` ms. Conservar el script ampliado y los reintentos desactivados. Guardar y desplegar. La prueba de regresión confirmó HTTP **200**, `authenticated: true`, `authorized: true` y `user: lab19`. Guardar una nueva versión numerada del diseño funcional mediante **Save as Version**.
+
+### Resultado esperado y validación
+
+| Control | Resultado observado |
+|---|---|
+| Timeout de 2000 ms | `TimeoutException` registrada en MPL |
+| Respuesta antes de clasificar | HTTP 500 / `INTEGRATION_ERROR` |
+| Respuesta después de clasificar | HTTP 504 / `UPSTREAM_TIMEOUT` |
+| Diagnóstico original | `Request timeout ... after 2000 ms` |
+| Estado MPL | `Completed` |
+| Restauración del consumo autenticado | HTTP 200 |
+| Versionado | Versión numerada creada y confirmada |
+
+**Problemas encontrados:** ninguno adicional que impidiera completar el laboratorio. La respuesta genérica inicial HTTP 500 era coherente con la ausencia de una clasificación específica para `TimeoutException`.
+
+**Aprendizajes:** una respuesta HTTP de error demuestra que el receptor obtuvo un estado HTTP; un timeout indica que no se completó la espera dentro del límite establecido y no permite concluir, por sí solo, si el servidor procesó la solicitud. El tiempo total del MPL puede superar el timeout configurado porque incluye otras etapas. El HTTP 504 es una decisión explícita del contrato de nuestra API. Los reintentos deben evaluarse considerando idempotencia y posibles duplicados, especialmente para operaciones con efectos de negocio.
+
 ## Criterios de validación del capítulo
 
-Un laboratorio se considera completado solo cuando su resultado práctico está respaldado por evidencias verificables. Los laboratorios 19.1 a 19.4 están completados con validación práctica; 19.5 y 19.6 permanecen pendientes. No se presume el funcionamiento de laboratorios todavía no ejecutados.
+Un laboratorio se considera completado solo cuando su resultado práctico está respaldado por evidencias verificables. Los laboratorios 19.1 a 19.6 se completaron con pruebas prácticas. Las respuestas HTTP 400, 502 y 504 y sus excepciones de origen se verificaron con Postman y MPL; la configuración funcional se restauró y versionó.
 
 ## Referencias
 
