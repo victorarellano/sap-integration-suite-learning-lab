@@ -853,3 +853,33 @@ Se recargó la página del editor. Después de la recarga, fue posible insertar 
 ### Alcance y aprendizaje
 
 La recarga de la página resolvió el síntoma en esta sesión. **No se determinó la causa técnica** y no existe evidencia suficiente para atribuirlo a un defecto general de SAP CPI, al navegador, al tenant o al runtime. Antes de reconstruir artefactos o modificar un diseño funcional por un problema de interacción del editor, comprobar si una recarga permite repetir la operación y validar luego el resultado guardado.
+
+## KBA — HTTP 415 al consultar una entidad OData V2 con `Accept: application/xml`
+
+**Origen:** capítulo 20.1, Northwind OData V2. **Estado:** corrección comprobada en Postman.
+
+**Síntoma:** `GET /Customers('ALFKI')` devolvió `415 Unsupported Media Type` y `Microsoft.Data.OData.ODataContentTypeException` al utilizar `Accept: application/xml`.
+
+**Diagnóstico:** el cuerpo del error indicó que el tipo MIME solicitado no coincidía con los formatos admitidos para la respuesta de entidad. El mismo `Accept` sí había permitido obtener el Service Document y `$metadata`; estos resultados no garantizan compatibilidad para entidades.
+
+**Corrección y validación:** retirar el header `Accept` explícito y repetir la consulta. Se obtuvo HTTP 200 con una entrada Atom/XML y `CustomerID=ALFKI`. El servidor mencionó `application/atom+xml` entre los formatos admitidos, pero no se validó una ejecución independiente con ese header.
+
+**Alcance:** comportamiento confirmado en el servicio público Northwind durante el laboratorio 20.1; no atribuirlo a CPI ni generalizarlo a todos los servicios OData.
+
+**Evidencia:** capítulo 20, `20-04-postman-odata-customer-por-clave.png`; el HTTP 415 fue observado durante el diagnóstico.
+
+## KBA — Diferencia observada en la estructura JSON de colecciones Northwind con `$top`
+
+**Origen:** capítulo 20.2, Northwind OData V2. **Estado:** comportamiento observado; causa técnica no confirmada.
+
+**Síntoma:** una respuesta de colección se presentó como `d.results`, mientras que una consulta con `$top` mostró un arreglo directamente bajo `d`. El usuario aisló `$top` como el cambio que coincidía con la diferencia en sus pruebas controladas.
+
+**Comprobación:** la respuesta con `$top` declaró `Content-Type: application/json;odata=verbose;charset=utf-8`. Las capturas de las consultas con `$select` y `$orderby` muestran el arreglo bajo `d`.
+
+**Diagnóstico:** no se ha establecido por qué el servicio devolvió estructuras distintas ni si intervienen otros factores. El header declarado y el cuerpo observado deben registrarse separadamente. No afirmar que `$top` elimina `results` por definición de OData V2.
+
+**Mitigación:** inspeccionar el cuerpo y `Content-Type` reales antes de diseñar expresiones JSONPath, scripts o mappings que dependan de una ruta fija. No se implementó ni validó una normalización automática.
+
+**Alcance:** observación limitada a las consultas Northwind ejecutadas en Postman durante 20.2.
+
+**Evidencias:** `20-06-postman-odata-filter-country-germany.png`, `20-07-postman-odata-select-properties.png`, `20-08-postman-odata-orderby-desc-top5.png` y comprobación del header de respuesta.
