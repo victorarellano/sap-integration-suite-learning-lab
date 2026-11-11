@@ -1,6 +1,6 @@
 # 20 - OData en Integration Suite
 
-**Estado del tema:** 🟨 En curso - laboratorios 20.1 y 20.2 completados; 20.3 a 20.6 pendientes.
+**Estado del tema:** 🟨 En curso - laboratorios 20.1 a 20.4 completados; 20.5 y 20.6 pendientes.
 **Package de referencia:** `CPI Learning Lab`
 **Servicio de pruebas:** Northwind OData V2 (`https://services.odata.org/V2/Northwind/Northwind.svc/`)
 
@@ -14,8 +14,8 @@ Comprender el modelo de entidades y metadatos de OData y construir consultas ver
 |---|---|---|
 | 20.1 | Service Document, metadata, entidad, clave y EntitySet | ✅ Completado |
 | 20.2 | `$filter`, `$select`, `$orderby`, `$top`, `$expand` y consulta combinada | ✅ Completado |
-| 20.3 | OData Receiver V2 en CPI | ⬜ Pendiente |
-| 20.4 | Consultas dinámicas desde CPI | ⬜ Pendiente |
+| 20.3 | OData Receiver V2 en CPI | ✅ Completado |
+| 20.4 | Selección dinámica del recurso OData mediante header y property | ✅ Completado |
 | 20.5 | OData V4 | ⬜ Pendiente |
 | 20.6 | Paginación y operaciones de escritura, condicionadas al servicio | ⬜ Pendiente |
 
@@ -145,13 +145,139 @@ En pruebas controladas realizadas en Postman, el usuario observó `d.results` en
 
 Los operadores permiten consultar de manera selectiva y recuperar relaciones sin construir endpoints particulares para cada filtro. Las referencias `__deferred` identifican relaciones no expandidas. Las diferencias de representación JSON deben contrastarse con el contenido y los headers reales.
 
+## Arquitectura de los laboratorios 20.3 y 20.4
+
+```mermaid
+flowchart LR
+  P["Postman"] -->|"GET HTTPS + OAuth"| S["HTTPS Sender"]
+  S --> CM["Content Modifier - solo 20.4"]
+  CM --> RR["Request Reply"]
+  S -.->|"20.3: conexión directa"| RR
+  RR -->|"OData V2 Receiver"| N["Northwind OData V2"]
+  N --> RR
+  RR --> P
+```
+
+En 20.3, HTTPS Sender se conecta directamente a Request Reply; en 20.4 se incorpora Content Modifier para preparar el recurso de consulta. El servicio externo responde sin autenticación saliente; el endpoint CPI se invoca con la autorización configurada en HTTPS Sender.
+
+## 20.3 - Consulta de Customers mediante OData Receiver V2
+
+**Estado:** ✅ Completado
+
+### Objetivo y conceptos
+
+Consumir una colección OData V2 desde Cloud Integration utilizando el adaptador nativo y una operación de lectura síncrona. `Query (GET)` obtiene una colección; `Request Reply` espera la respuesta del receptor y la devuelve al emisor HTTPS. El adaptador entrega en este escenario un XML de entidades, distinto de la representación Atom/XML observada al consultar directamente Northwind.
+
+**Prerrequisitos:** 20.1 y 20.2, acceso al paquete `CPI Learning Lab`, Postman con OAuth 2.0 y acceso al monitor MPL.
+
+### Procedimiento y evidencias
+
+1. Crear el iFlow `LAB20_Consulta_OData_V2` en `CPI Learning Lab` y registrar una versión numerada inicial antes de configurar sus componentes. Incorporar `HTTPS Sender → Start → Request Reply → End` y un participante Receiver enlazado mediante **OData V2**. La separación entre emisor HTTPS y receptor OData permite exponer una URL propia de CPI sin acoplar al consumidor a la URL pública de Northwind.
+
+2. Configurar **HTTPS Sender** con `Address: /lab20/odata-v2`, `Authorization: User Role`, `User Role: ESBMessaging.send` y CSRF desactivado. Se trata de un endpoint de lectura GET protegido por la autorización de CPI.
+
+3. Configurar **OData Receiver V2 / Connection** con `Address: https://services.odata.org/V2/Northwind/Northwind.svc/`, `Proxy Type: Internet`, `Authentication: None`, `CSRF Protected: activado` y `Reuse Connection: activado`. El servicio público no requirió credenciales salientes durante la prueba.
+
+4. En **Processing**, utilizar `Model Operation` para seleccionar `Query (GET)` sobre el EntitySet `Customers`; establecer `Resource Path: Customers` y `Query Options: $top=3`. Mantener `Enable Batch Processing: desactivado`, `Custom Query Options: vacío`, `Content Type: Atom`, `Attach Error Details on Failure: activado` y timeout de un minuto. `$top=3` limita la consulta para obtener una respuesta pequeña y verificable.
+
+5. Guardar y desplegar el iFlow. El diseñador mostró `Deployed` y `Runtime Status: Started`.
+
+   **Evidencia 20-11 - iFlow OData V2 desplegado.** Arquitectura HTTPS Sender, Request Reply y OData Receiver V2, con runtime iniciado.
+
+   ![Evidencia 20-11 - iFlow OData V2 desplegado](images/tema-20/20-11-cpi-odata-v2-iflow-deployed.png)
+
+6. Crear en Postman la petición independiente `20.3 - GET Customers OData V2`: `GET {{cpi_base_url}}/http/lab20/odata-v2`, OAuth 2.0, sin body. La ejecución devolvió **HTTP 200**, XML con raíz `<Customers>` y tres elementos `<Customer>` (cantidad confirmada en la validación). Entre los clientes identificados se encuentran `ALFKI` y `ANATR`.
+
+   **Evidencia 20-12 - Consulta OData V2 desde Postman.** Endpoint CPI, HTTP 200 y respuesta XML con tres clientes.
+
+   ![Evidencia 20-12 - Consulta OData V2 desde Postman](images/tema-20/20-12-postman-odata-v2-get-customers-xml.png)
+
+7. Consultar el registro correspondiente en **Monitor Message Processing**. El MPL mostró `Completed`, `OverallStatus: COMPLETED`, `IntermediateError: false` y un tiempo de procesamiento de **198 ms**. Esta comprobación distingue la respuesta recibida por el consumidor del resultado del procesamiento en CPI.
+
+   **Evidencia 20-13 - MPL de consulta OData V2.** Procesamiento completado del iFlow `LAB20_Consulta_OData_V2`.
+
+   ![Evidencia 20-13 - MPL de consulta OData V2](images/tema-20/20-13-cpi-odata-v2-mpl-completed.png)
+
+### Resultado esperado y validación
+
+Se esperaba HTTP 200, tres clientes XML y un MPL Completed. Los tres resultados se comprobaron. El adaptador resolvió una consulta `Query (GET)` con `$top=3` sin requerir un cuerpo de entrada.
+
+### Problemas encontrados y alcance
+
+El diseñador mostró el warning `Http Sender Component may not pass XML or None message to OData Receiver. OData Receiver supports XML or None input only.`. No impidió el despliegue ni la ejecución satisfactoria de este GET sin body. Esto no demuestra compatibilidad universal para otras operaciones o formatos.
+
+### Aprendizajes
+
+El adaptador nativo permite consumir una colección OData sin construir manualmente la llamada HTTP al servicio. La validación requiere comprobar tanto el resultado de Postman como el MPL. La estructura XML observada debe tratarse como salida efectiva del adaptador, no como una copia literal de la respuesta Atom del backend.
+
+## 20.4 - Selección dinámica de recurso OData V2 desde Postman
+
+**Estado:** ✅ Completado, dentro del alcance de selección dinámica de EntitySet
+
+### Objetivo y conceptos
+
+Seleccionar el recurso OData en tiempo de ejecución mediante un header HTTP, un Content Modifier y una Exchange Property, sin modificar ni redesplegar el iFlow entre consultas. Se utilizan `Customers` y `Categories` como recursos del servicio Northwind.
+
+**Prerrequisitos:** 20.3, HTTPS Sender, Content Modifier, headers, exchange properties y monitorización MPL.
+
+### Procedimiento y evidencias
+
+1. Crear un iFlow independiente `LAB20_Consulta_OData_Dinamica_V2` en el paquete `CPI Learning Lab`, con versión inicial `1.0.0`. La separación conserva intacto el iFlow de 20.3. Definir `HTTPS Sender` con `Address: /lab20/odata-dinamica-v2`, autorización `User Role / ESBMessaging.send` y CSRF desactivado. Construir `Start → Content Modifier → Request Reply → End` y conectar Request Reply al Receiver mediante **OData V2**.
+
+2. Configurar el receptor con la misma conexión a Northwind del laboratorio 20.3. En Processing, seleccionar `Query (GET)` y `Resource Path: ${property.odataResourcePath}`, con `Query Options` vacío, Batch Processing desactivado y `Content Type: Atom`. La documentación SAP del adaptador admite expresiones de headers o properties en `Resource Path`; no se presupone soporte equivalente en `Query Options`.
+
+3. En el Content Modifier, crear la Exchange Property `odataResourcePath`, inicialmente como constante `Customers` (`java.lang.String`). Desplegar y comprobar `Started`. Crear la petición Postman `20.4 - GET Customers Dynamic Resource Path`, método GET, OAuth 2.0, sin body y URL `{{cpi_base_url}}/http/lab20/odata-dinamica-v2`. Se recibió **HTTP 200** y XML `<Customers>` con clientes, lo que valida la resolución de la ruta desde una propiedad.
+
+   **Evidencia 20-14 - Resource Path mediante Exchange Property.** Respuesta HTTP 200 y colección XML Customers con la propiedad inicialmente constante.
+
+   ![Evidencia 20-14 - Resource Path mediante Exchange Property](images/tema-20/20-14-postman-odata-resource-path-dinamico.png)
+
+4. Consultar el MPL de la ejecución satisfactoria. El registro seleccionado del iFlow `LAB20_Consulta_OData_Dinamica_V2` mostró **Completed** y **1 s 414 ms** de procesamiento (11/11/2026, 17:29:14). Este registro corresponde a la consulta de Customers con propiedad constante.
+
+   **Evidencia 20-15 - MPL de Resource Path dinámico.** Registro seleccionado en estado Completed.
+
+   ![Evidencia 20-15 - MPL de Resource Path dinámico](images/tema-20/20-15-cpi-odata-resource-path-dinamico-mpl-completed.png)
+
+5. Registrar la versión `1.0.1` antes de incorporar la lectura del header externo. En el Content Modifier, cambiar la propiedad `odataResourcePath` a `Source Type: Header`, `Source Value: X-OData-Resource` y `Data Type: java.lang.String`. Mantener `Resource Path: ${property.odataResourcePath}` en el receptor. En **Runtime Configuration** del iFlow, agregar `X-OData-Resource` a **Allowed Header(s)**. Esta configuración permite que el header de entrada sea accesible para el procesamiento del mensaje. Guardar y desplegar el diseño modificado.
+
+6. Crear la petición independiente `20.4 - GET Customers Header Dinamico`: `GET {{cpi_base_url}}/http/lab20/odata-dinamica-v2`, OAuth 2.0, sin body, header `X-OData-Resource: Customers`. Se obtuvo **HTTP 200** y XML `<Customers>`, con clientes como `ALFKI` y `ANATR`.
+
+   **Evidencia 20-16 - Recurso Customers recibido por header.** Header personalizado, HTTP 200 y respuesta XML de clientes.
+
+   ![Evidencia 20-16 - Recurso Customers recibido por header](images/tema-20/20-16-postman-odata-header-dinamico-customers.png)
+
+7. En Postman, cambiar únicamente el valor del header a `X-OData-Resource: Categories`, sin modificar ni redesplegar el iFlow. Se obtuvo **HTTP 200** y XML `<Categories>` con categorías como `Beverages`, `Condiments`, `Confections` y `Dairy Products`. El contraste entre ambas ejecuciones demuestra la selección de un EntitySet diferente a partir del valor recibido.
+
+   **Evidencia 20-17 - Recurso Categories recibido por header.** Mismo endpoint, header Categories y respuesta XML de categorías.
+
+   ![Evidencia 20-17 - Recurso Categories recibido por header](images/tema-20/20-17-postman-odata-header-dinamico-categories.png)
+
+8. Verificar la arquitectura desplegada y el estado `Started`. El flujo final contiene HTTPS Sender, Content Modifier, Request Reply y OData Receiver V2. Se mantiene visible el warning de compatibilidad del adaptador observado en 20.3, sin impedir estas consultas GET.
+
+   **Evidencia 20-18 - Arquitectura final del iFlow dinámico.** Diagrama del iFlow y runtime Started.
+
+   ![Evidencia 20-18 - Arquitectura final del iFlow dinámico](images/tema-20/20-18-cpi-odata-dinamico-iflow-final.png)
+
+### Resultado esperado y validación
+
+Se esperaba obtener dos colecciones distintas desde el mismo endpoint de CPI, cambiando solamente el header de Postman. Se validaron **HTTP 200 con Customers** y **HTTP 200 con Categories**, sin nuevo despliegue entre ambas solicitudes. La consulta inicial con Exchange Property constante también quedó validada con MPL Completed.
+
+### Restricciones y seguridad
+
+El laboratorio demuestra selección dinámica de recurso, **no** la parametrización de `$filter`, `$top` ni otras opciones de consulta. No se implementó una lista de recursos permitidos, por lo que la configuración debe considerarse **de laboratorio** y no una política segura de exposición de entidades para producción. Un diseño productivo requeriría validar explícitamente el recurso solicitado antes de invocar el receptor.
+
+### Aprendizajes
+
+`Allowed Header(s)` permite recibir el header personalizado en el procesamiento; Content Modifier lo transfiere a una Exchange Property; el OData Receiver resuelve esa propiedad como `Resource Path`. La operación permanece fija en `Query (GET)`; la selección de recurso no equivale a seleccionar dinámicamente el método HTTP.
+
 ## Estado de validación del capítulo
 
-Los laboratorios **20.1** y **20.2** cuentan con evidencia práctica y están completados. Los laboratorios **20.3 a 20.6** permanecen pendientes; el capítulo completo continúa **🟨 En curso**. Hasta este corte no se creó ni modificó ningún iFlow.
+Los laboratorios **20.1, 20.2, 20.3 y 20.4** cuentan con resultados prácticos validados y están **✅ Completados** dentro de sus alcances. Los laboratorios **20.5 y 20.6** permanecen **⬜ Pendientes**; el capítulo continúa **🟨 En curso**. La parametrización de `$filter` y `$top` desde CPI y el control de recursos permitidos no forman parte de las capacidades validadas en 20.4.
 
 ## Referencias
 
 - [OData V2 - URI Conventions](https://www.odata.org/documentation/odata-version-2-0/uri-conventions/)
 - [OData V2 - JSON Format](https://www.odata.org/documentation/odata-version-2-0/json-format/)
 - [OData.org - Reference Services](https://www.odata.org/odata-services/)
+- [SAP Help - Configure the OData V2 Receiver Adapter](https://help.sap.com/docs/cloud-integration/sap-cloud-integration/configure-odata-v2-receiver-adapter)
 - [SAP Help Portal - Cloud Integration](https://help.sap.com/docs/cloud-integration)
