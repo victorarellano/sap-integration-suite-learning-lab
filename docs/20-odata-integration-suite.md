@@ -1,8 +1,8 @@
 # 20 - OData en Integration Suite
 
-**Estado del tema:** 🟨 En curso - laboratorios 20.1 a 20.4 completados; 20.5 y 20.6 pendientes.
+**Estado del tema:** 🟨 En curso - laboratorios 20.1 a 20.5 completados; 20.6 pendiente.
 **Package de referencia:** `CPI Learning Lab`
-**Servicio de pruebas:** Northwind OData V2 (`https://services.odata.org/V2/Northwind/Northwind.svc/`)
+**Servicios de pruebas:** Northwind OData V2 (`https://services.odata.org/V2/Northwind/Northwind.svc/`) y V4 (`https://services.odata.org/V4/Northwind/Northwind.svc/`)
 
 ## Objetivo y contexto
 
@@ -16,7 +16,7 @@ Comprender el modelo de entidades y metadatos de OData y construir consultas ver
 | 20.2 | `$filter`, `$select`, `$orderby`, `$top`, `$expand` y consulta combinada | ✅ Completado |
 | 20.3 | OData Receiver V2 en CPI | ✅ Completado |
 | 20.4 | Selección dinámica del recurso OData mediante header y property | ✅ Completado |
-| 20.5 | OData V4 | ⬜ Pendiente |
+| 20.5 | OData V4 | ✅ Completado |
 | 20.6 | Paginación y operaciones de escritura, condicionadas al servicio | ⬜ Pendiente |
 
 ## Prerrequisitos
@@ -270,9 +270,90 @@ El laboratorio demuestra selección dinámica de recurso, **no** la parametrizac
 
 `Allowed Header(s)` permite recibir el header personalizado en el procesamiento; Content Modifier lo transfiere a una Exchange Property; el OData Receiver resuelve esa propiedad como `Resource Path`. La operación permanece fija en `Query (GET)`; la selección de recurso no equivale a seleccionar dinámicamente el método HTTP.
 
+## Arquitectura del laboratorio 20.5
+
+```mermaid
+flowchart LR
+  P["Postman"] -->|"GET HTTPS + OAuth 2.0"| S["HTTPS Sender /lab20/odata-v4"]
+  S --> RR["Request Reply"]
+  RR -->|"OData V4 Receiver: Query GET"| N["Northwind OData V4"]
+  N --> RR
+  RR -->|"XML Categories"| P
+```
+
+## 20.5 - Consulta OData V4 desde SAP Cloud Integration
+
+**Estado:** ✅ Completado
+
+### Objetivo y conceptos
+
+Comprobar el contrato de un servicio OData V4 y consumir una colección desde CPI mediante el adaptador OData V4 Receiver. Se contrastan el Service Document, el documento `$metadata`, la consulta directa en JSON y la representación XML devuelta por el adaptador en la ejecución validada.
+
+**Prerrequisitos:** laboratorios 20.1 a 20.4, Postman, OAuth 2.0 para el endpoint CPI, acceso a Design y Monitor, y disponibilidad del adaptador OData V4 Receiver.
+
+**Servicio:** `https://services.odata.org/V4/Northwind/Northwind.svc/`.
+
+### Procedimiento y evidencias
+
+1. Crear en Postman la petición independiente `20.5 - GET Service Document OData V4`, método `GET`, URL raíz del servicio y header `Accept: application/json`. Se obtuvo **HTTP 200** y JSON con `@odata.context` y `value`, donde se publican EntitySets como `Categories`, `CustomerDemographics` y `Customers`. El Service Document permite descubrir los recursos disponibles.
+
+   **Evidencia 20-19 - Service Document OData V4.** URL, HTTP 200 y conjuntos de entidades publicados.
+
+   ![Evidencia 20-19 - Service Document OData V4](images/tema-20/20-19-postman-odata-v4-service-document.png)
+
+2. Crear `20.5 - GET Metadata OData V4`: `GET https://services.odata.org/V4/Northwind/Northwind.svc/$metadata`. Se obtuvo **HTTP 200** y XML EDMX con `edmx:Edmx Version="4.0"`, namespace `NorthwindModel`, `EntityType Name="Category"`, clave `CategoryID` de tipo `Edm.Int32` y propiedad de navegación `Products`. Los metadatos describen la estructura y relaciones del modelo, no los registros de negocio.
+
+   **Evidencia 20-20 - Metadatos OData V4.** EDMX 4.0, EntityType, clave y NavigationProperty.
+
+   ![Evidencia 20-20 - Metadatos OData V4](images/tema-20/20-20-postman-odata-v4-metadata.png)
+
+3. Crear `20.5 - GET Categories OData V4`: `GET https://services.odata.org/V4/Northwind/Northwind.svc/Categories?$top=3`, con `Accept: application/json`. Se obtuvo **HTTP 200** y JSON con `@odata.context` y la colección `value`. El usuario comprobó tres categorías; la captura muestra la primera y un campo `Picture` extenso. `$top=3` permite acotar la cantidad de entidades consultadas.
+
+   **Evidencia 20-21 - Categories OData V4 con límite.** HTTP 200, parámetro `$top=3` y respuesta JSON.
+
+   ![Evidencia 20-21 - Categories OData V4 con límite](images/tema-20/20-21-postman-odata-v4-categories-top3.png)
+
+4. Crear el iFlow independiente `LAB20_Consulta_OData_V4` en el package `CPI Learning Lab` y guardar la versión inicial `1.0.0` antes de configurarlo. Construir `HTTPS Sender → Start → Request Reply → End`, conectando Request Reply a un Receiver mediante **OData V4**. Esta arquitectura expone un endpoint CPI propio y ejecuta una consulta síncrona al servicio externo.
+
+5. Configurar **HTTPS Sender** con `Address: /lab20/odata-v4`, `Authorization: User Role`, `User Role: ESBMessaging.send` y `CSRF Protected: desactivado`. La prueba es GET y el endpoint CPI requiere autorización; el servicio Northwind público no requirió autenticación saliente.
+
+6. Configurar **OData V4 Receiver / Connection** con `Address: https://services.odata.org/V4/Northwind/Northwind.svc/`, `Proxy Type: Internet`, `Authentication: None`, `Allow Chunking: desactivado`, `CSRF Protected: desactivado`, `Timeout (in min): 1` y `Reuse Connection: activado`. En **Processing**, definir `Operation: Query (GET)`, `Resource Path: Categories`, `Query Options: $top=3`, `Process in Pages: desactivado` y `Attach Error Details on Failure: activado`. La paginación se reserva para 20.6.
+
+7. Guardar y verificar que la pestaña **Problems** no presente errores. Desplegar y comprobar el estado `Started` del iFlow. La comprobación de diseño y despliegue precede a la prueba funcional.
+
+   **Evidencia 20-22 - iFlow OData V4 desplegado.** Arquitectura y estado Started del artefacto.
+
+   ![Evidencia 20-22 - iFlow OData V4 desplegado](images/tema-20/20-22-cpi-odata-v4-iflow-deployed.png)
+
+8. Crear en Postman la petición independiente `20.5 - GET Categories OData V4 via CPI`: método `GET`, URL `{{cpi_base_url}}/http/lab20/odata-v4`, autorización OAuth 2.0 y sin body. Se obtuvo **HTTP 200** en **1,64 s**, con XML `<Categories>` que contenía tres elementos `<Category>`, identificados por `CategoryID` 1, 2 y 3 (`Beverages`, `Condiments`, `Confections`).
+
+   **Evidencia 20-23 - Consulta OData V4 a través de CPI.** Endpoint CPI, HTTP 200 y XML con tres categorías.
+
+   ![Evidencia 20-23 - Consulta OData V4 a través de CPI](images/tema-20/20-23-postman-odata-v4-categories-cpi.png)
+
+9. Consultar **Monitor Message Processing** para `LAB20_Consulta_OData_V4`. El registro mostró `Status: Completed`, `OverallStatus: COMPLETED`, `IntermediateError: false` y **Processing Time: 786 ms**, el **11/11/2026**. Esta validación confirma el procesamiento correcto en CPI, además de la respuesta HTTP recibida por Postman.
+
+   **Evidencia 20-24 - MPL de consulta OData V4.** Registro Completed sin error intermedio.
+
+   ![Evidencia 20-24 - MPL de consulta OData V4](images/tema-20/20-24-cpi-odata-v4-mpl-completed.png)
+
+10. Guardar la versión final **`1.0.1`** del iFlow, correspondiente al diseño validado. No es necesario redesplegar únicamente por registrar una versión de diseño.
+
+### Resultado esperado y validación
+
+Se esperaba consultar `Categories` mediante OData V4 Receiver, recibir HTTP 200 con tres categorías y comprobar MPL Completed. Los tres resultados se verificaron. El iFlow final quedó registrado como versión `1.0.1`.
+
+### Problemas encontrados y alcance
+
+Durante la configuración inicial, el diseñador mostró `Attribute 'Address' is mandatory` y `Enter a valid resource, eg: Entity(keyPredicate)` porque aún faltaban valores de conexión y recurso. Tras completar `Address` y `Resource Path: Categories`, el usuario confirmó que **Problems** no mostraba errores. No se observaron fallos de ejecución en la prueba final.
+
+### Aprendizajes
+
+El Service Document OData V4 devolvió JSON y `$metadata` devolvió XML EDMX 4.0. La consulta directa de `Categories?$top=3` devolvió JSON, mientras que la consulta a través del OData V4 Receiver de CPI devolvió XML de entidades. Este es el comportamiento **observado en el escenario probado**, no una afirmación universal sobre todos los adaptadores, operaciones o configuraciones. La respuesta HTTP y el MPL deben validarse por separado.
+
 ## Estado de validación del capítulo
 
-Los laboratorios **20.1, 20.2, 20.3 y 20.4** cuentan con resultados prácticos validados y están **✅ Completados** dentro de sus alcances. Los laboratorios **20.5 y 20.6** permanecen **⬜ Pendientes**; el capítulo continúa **🟨 En curso**. La parametrización de `$filter` y `$top` desde CPI y el control de recursos permitidos no forman parte de las capacidades validadas en 20.4.
+Los laboratorios **20.1 a 20.5** cuentan con resultados prácticos validados y están **✅ Completados** dentro de sus alcances. El laboratorio **20.6** permanece **⬜ Pendiente**; el capítulo continúa **🟨 En curso**. La parametrización de `$filter` y `$top` desde CPI y el control de recursos permitidos no forman parte de las capacidades validadas en 20.4.
 
 ## Referencias
 
@@ -281,3 +362,4 @@ Los laboratorios **20.1, 20.2, 20.3 y 20.4** cuentan con resultados prácticos v
 - [OData.org - Reference Services](https://www.odata.org/odata-services/)
 - [SAP Help - Configure the OData V2 Receiver Adapter](https://help.sap.com/docs/cloud-integration/sap-cloud-integration/configure-odata-v2-receiver-adapter)
 - [SAP Help Portal - Cloud Integration](https://help.sap.com/docs/cloud-integration)
+- [SAP Help - Configure the OData V4 Receiver Adapter](https://help.sap.com/docs/cloud-integration/sap-cloud-integration/configure-odata-v4-receiver-adapter)
