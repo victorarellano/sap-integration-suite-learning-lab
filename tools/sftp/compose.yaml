@@ -1,0 +1,12 @@
+services:
+  sftp:
+    image: atmoz/sftp:latest
+    container_name: sap-learning-lab-sftp
+    ports:
+      - "127.0.0.1:2222:22"
+    volumes:
+      - ./data:/home/labuser/upload
+      - ./ssh/ssh_host_ed25519_key:/etc/ssh/hostkeys/ssh_host_ed25519_key:ro
+      - ./init/10-host-key.sh:/etc/sftp.d/10-host-key.sh:ro
+    command: "labuser:${SFTP_PASSWORD}:1001"
+    restart: unless-stopped

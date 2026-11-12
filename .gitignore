@@ -8,3 +8,10 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.log
+
+
+
+# SFTP laboratory - local runtime and secrets
+/tools/sftp/.env
+/tools/sftp/data/
+/tools/sftp/ssh/

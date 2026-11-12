@@ -883,3 +883,41 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 **Alcance:** observación limitada a las consultas Northwind ejecutadas en Postman durante 20.2.
 
 **Evidencias:** `20-06-postman-odata-filter-country-germany.png`, `20-07-postman-odata-select-properties.png`, `20-08-postman-odata-orderby-desc-top5.png` y comprobación del header de respuesta.
+
+## KBA-LAB-021-A — Clave privada de host SSH rechazada en Docker sobre Windows
+
+**Estado:** Resuelto en el entorno del laboratorio.
+
+**Síntomas:** `WARNING: UNPROTECTED PRIVATE KEY FILE!`, `Permissions 0777 ... are too open`, `Unable to load host key ... bad permissions`, y `chmod ... Read-only file system`.
+
+**Diagnóstico:** la clave privada ED25519 montada desde el host Windows no tenía permisos aceptables para OpenSSH dentro del contenedor. La conexión inicial utilizó una clave RSA alternativa, por lo que el éxito de la conexión no validaba la clave ED25519 prevista.
+
+**Corrección:** se configuró un script de inicialización ejecutado desde `/etc/sftp.d/` para instalar las claves de host con permisos apropiados dentro del contenedor Linux. Tras reiniciar se comprobó que desaparecía el aviso de permisos y que CPI negociaba `ssh-ed25519` con la misma huella SHA256 obtenida directamente del contenedor.
+
+**Alcance:** configuración local Docker + atmoz/sftp + volúmenes Windows observada en capítulo 21. El script exacto debe conservarse en el repositorio para reproducibilidad.
+
+## KBA-LAB-021-B — `Cannot access known hosts artifact` en SSH Connectivity Test
+
+**Estado:** Resuelto.
+
+**Síntoma:** `java.lang.IllegalArgumentException: Cannot access known hosts artifact` al usar `Host Key Verification = Against Tenant`.
+
+**Diagnóstico:** no había entradas SSH Known Hosts registradas en el tenant para el servidor de laboratorio.
+
+**Corrección:** se creó y desplegó un artefacto SSH Known Hosts con la clave pública ED25519 real y la entrada `[sftp-learning-lab.internal]:2222 ssh-ed25519 ...`. Se repitió la prueba con la credencial `LAB21_SFTP_BASIC` y `Against Tenant`.
+
+**Validación:** `Successfully reached host`; tipo de clave `ssh-ed25519`; acceso al directorio `/upload` comprobado mediante `Check Directory Access`.
+
+**Alcance:** autenticación/conectividad SSH y acceso al directorio. No demuestra aún escritura SFTP mediante un iFlow.
+
+## KBA-LAB-021-C — Contraseña administrativa de SAP Cloud Connector olvidada
+
+**Estado:** Incidente resuelto al recordar la contraseña; recuperación técnica no ejecutada.
+
+**Síntoma:** no se recordaba la contraseña de administración de Cloud Connector.
+
+**Resultado:** el administrador recordó la contraseña y accedió sin restauración de archivos ni reinstalación.
+
+**Límite:** no se comprobó que reemplazar o importar un XML de usuarios permita restablecer la contraseña, ni se verificó el formato interno de almacenamiento de la credencial. No presentar la restauración del XML como método probado.
+
+**Prevención:** conservar un respaldo soportado por la versión de Cloud Connector y las credenciales administrativas en un gestor de contraseñas; verificar con documentación oficial la recuperación aplicable a la versión instalada antes de modificar archivos internos.
