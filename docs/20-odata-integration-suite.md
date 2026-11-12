@@ -1,6 +1,6 @@
 # 20 - OData en Integration Suite
 
-**Estado del tema:** 🟨 En curso - laboratorios 20.1 a 20.5 completados; 20.6 pendiente.
+**Estado del tema:** ✅ Completado - laboratorios 20.1 a 20.6 validados dentro de sus alcances; operaciones de escritura no implementadas.
 **Package de referencia:** `CPI Learning Lab`
 **Servicios de pruebas:** Northwind OData V2 (`https://services.odata.org/V2/Northwind/Northwind.svc/`) y V4 (`https://services.odata.org/V4/Northwind/Northwind.svc/`)
 
@@ -17,7 +17,7 @@ Comprender el modelo de entidades y metadatos de OData y construir consultas ver
 | 20.3 | OData Receiver V2 en CPI | ✅ Completado |
 | 20.4 | Selección dinámica del recurso OData mediante header y property | ✅ Completado |
 | 20.5 | OData V4 | ✅ Completado |
-| 20.6 | Paginación y operaciones de escritura, condicionadas al servicio | ⬜ Pendiente |
+| 20.6 | Paginación OData V4 mediante token de continuación y Router; escritura fuera del alcance validado | ✅ Completado |
 
 ## Prerrequisitos
 
@@ -351,9 +351,130 @@ Durante la configuración inicial, el diseñador mostró `Attribute 'Address' is
 
 El Service Document OData V4 devolvió JSON y `$metadata` devolvió XML EDMX 4.0. La consulta directa de `Categories?$top=3` devolvió JSON, mientras que la consulta a través del OData V4 Receiver de CPI devolvió XML de entidades. Este es el comportamiento **observado en el escenario probado**, no una afirmación universal sobre todos los adaptadores, operaciones o configuraciones. La respuesta HTTP y el MPL deben validarse por separado.
 
+
+## Arquitectura del laboratorio 20.6
+
+```mermaid
+flowchart LR
+    P["Postman"] -->|"GET HTTPS + OAuth"| S["HTTPS Sender"]
+    S --> R{"Router"}
+    R -->|"Ruta por defecto: sin token"| A["Request Reply: página inicial"]
+    R -->|"Header X-Skip-Token con valor"| B["Request Reply: continuación"]
+    A --> O1["OData V4 Receiver: Customers"]
+    B --> O2["OData V4 Receiver: Customers + $skiptoken"]
+    O1 --> N["Northwind OData V4"]
+    O2 --> N
+    N -->|"Respuesta y enlace de continuación"| P
+```
+
+El cliente realiza una petición por página. El servidor entrega un token de continuación, que el cliente envía en una nueva solicitud. **No existe un bucle de paginación automática dentro de este diseño**.
+
+## 20.6 - Paginación OData V4 mediante token de continuación
+
+**Estado:** ✅ Completado - paginación explícita validada con dos páginas sucesivas.
+
+### Objetivo y conceptos
+
+Implementar un endpoint CPI que permita solicitar la primera página de `Customers` y continuar la consulta con el `$skiptoken` proporcionado por Northwind. Distinguir la paginación **controlada por el servidor**, que entrega `@odata.nextLink`, de la ejecución automática de múltiples páginas dentro de un único mensaje CPI.
+
+El token se trata como un valor de continuación entregado por el servidor: no se calcula ni incrementa manualmente. El cliente realiza una nueva petición HTTP por cada página. El laboratorio **no valida** el uso de `Process in Pages`, la consolidación de páginas ni operaciones de escritura.
+
+**Prerrequisitos:** laboratorio 20.5, Postman con OAuth 2.0 para CPI, acceso a Design/Monitor y servicio Northwind OData V4 disponible.
+
+**Artefacto:** `LAB20_Paginacion_OData_V4`, creado como copia de `LAB20_Consulta_OData_V4`, con versión inicial `1.0.0`. La versión final de diseño no quedó confirmada en las evidencias disponibles; no se atribuye una versión adicional.
+
+### Configuración de componentes
+
+| Componente | Parámetro | Valor | Motivo |
+|---|---|---|---|
+| HTTPS Sender | Address | `/lab20/odata-paginacion-v4` | Endpoint independiente del laboratorio 20.5 |
+| HTTPS Sender | Autorización | OAuth 2.0 utilizado en Postman para acceder al endpoint protegido | Mantener la protección del endpoint CPI |
+| Runtime Configuration | Allowed Header(s) | `X-Skip-Token` | Permitir el uso del header personalizado en el enrutamiento |
+| Router | Ruta con token | Non-XML; `${header.x-skip-token} != ''` | Enviar las peticiones con token a la consulta de continuación |
+| Router | Ruta sin token | Default Route | Ejecutar la primera consulta sin `$skiptoken` |
+| OData V4 Receiver, ruta inicial | Operation / Resource Path | `Query (GET)` / `Customers` | Consultar la primera página |
+| OData V4 Receiver, ruta inicial | Query Options | Vacío | No suministrar token en la primera solicitud |
+| OData V4 Receiver, ruta con token | Operation / Resource Path | `Query (GET)` / `Customers` | Consultar la siguiente página |
+| OData V4 Receiver, ruta con token | Query Options | `$skiptoken=${header.x-skip-token}` | Transferir el token recibido al servicio OData |
+| Servicio externo | URL base | `https://services.odata.org/V4/Northwind/Northwind.svc/` | Servicio OData V4 de referencia |
+
+La ruta por defecto se diferencia de la ruta con token por **Query Options vacío**. Las dos rutas mantienen la misma colección `Customers`. La selección de ruta depende del header; no se realiza una segunda consulta automáticamente.
+
+### Procedimiento y evidencias
+
+1. Copiar `LAB20_Consulta_OData_V4` como `LAB20_Paginacion_OData_V4` en `CPI Learning Lab`. Crear la versión inicial `1.0.0` antes de configurar el nuevo escenario. Establecer la dirección HTTPS `/lab20/odata-paginacion-v4`. Configurar un **Router** con dos caminos, cada uno hacia un **Request Reply** y su receptor OData V4. Guardar y desplegar. La arquitectura permite separar la primera consulta de la continuación sin modificar el iFlow original.
+
+   **Evidencia 20-25 - Arquitectura de paginación OData V4.** Se identifica el Router y los dos caminos de consulta del iFlow.
+
+   ![Evidencia 20-25 - Arquitectura de paginación OData V4](images/tema-20/20-25-cpi-odata-v4-paginacion-arquitectura.png)
+
+2. Configurar la ruta de continuación del Router con tipo **Non-XML** y condición `${header.x-skip-token} != ''`. Mantener el otro camino como **Default Route**. Incluir `X-Skip-Token` entre los headers permitidos del iFlow. El Router elige la consulta de continuación únicamente cuando recibe un token con valor.
+
+   **Evidencia 20-26 - Condición del Router.** Configuración de la ruta condicionada por el header y camino por defecto.
+
+   ![Evidencia 20-26 - Condición del Router](images/tema-20/20-26-cpi-odata-v4-paginacion-router.png)
+
+3. Configurar ambos receptores OData V4 con el recurso `Customers`. En la ruta inicial, dejar **Query Options vacío**. En la ruta de continuación, definir **Query Options** como `$skiptoken=${header.x-skip-token}`. Esto conserva el valor de continuación entregado por el servicio, sin generar un token propio.
+
+   **Evidencia 20-27 - Query Options de continuación.** El receptor de la ruta con token utiliza la expresión de header en `$skiptoken`.
+
+   ![Evidencia 20-27 - Query Options de continuación](images/tema-20/20-27-cpi-odata-v4-paginacion-query-token.png)
+
+4. En Postman, ejecutar una petición **GET** a `{{cpi_base_url}}/http/lab20/odata-paginacion-v4`, con la autorización OAuth 2.0 utilizada en el capítulo y **sin** header `X-Skip-Token`. La respuesta fue **HTTP 200** y la página observada terminó con el cliente `ERNSH`.
+
+   **Evidencia 20-28 - Primera página de Customers.** Consulta inicial sin token y respuesta satisfactoria.
+
+   ![Evidencia 20-28 - Primera página de Customers](images/tema-20/20-28-postman-odata-v4-paginacion-primera-pagina.png)
+
+5. Revisar los headers de la primera respuesta. Se observó `Nextlink` con un enlace de continuación que contenía `$skiptoken='ERNSH'`. Este valor procede del servicio y permite solicitar la siguiente página.
+
+   **Evidencia 20-29 - Enlace de continuación inicial.** Header `Nextlink` con el token de la primera página.
+
+   ![Evidencia 20-29 - Enlace de continuación inicial](images/tema-20/20-29-postman-odata-v4-paginacion-nextlink.png)
+
+6. Ejecutar una segunda petición **GET** al mismo endpoint CPI, agregando el header `X-Skip-Token: 'ERNSH'`. La respuesta fue **HTTP 200** y la página observada terminó con el cliente `LACOR`. Esto verifica que el Router utiliza el camino de continuación y que el receptor consulta datos posteriores al token anterior.
+
+   **Evidencia 20-30 - Segunda página de Customers.** Header de entrada con token y respuesta de continuación.
+
+   ![Evidencia 20-30 - Segunda página de Customers](images/tema-20/20-30-postman-odata-v4-paginacion-segunda-pagina.png)
+
+7. Revisar los headers de la segunda respuesta. Se observó un nuevo `Nextlink` con `$skiptoken='LACOR'`, que habilita continuar con otra petición si se requieren más registros.
+
+   **Evidencia 20-31 - Continuación después de la segunda página.** Segundo enlace de continuación entregado por Northwind.
+
+   ![Evidencia 20-31 - Continuación después de la segunda página](images/tema-20/20-31-postman-odata-v4-paginacion-segundo-nextlink.png)
+
+8. Verificar en **Monitor → Message Processing** el registro de ejecución de `LAB20_Paginacion_OData_V4`. La captura aportada mostró **Completed**, `OverallStatus = COMPLETED`, `IntermediateError = false` y **265 ms** de procesamiento. El MPL valida el procesamiento de la solicitud observada; no representa un recorrido automático de varias páginas dentro de una misma ejecución.
+
+   **Evidencia 20-32 - MPL de paginación OData V4.** Ejecución completada sin error intermedio.
+
+   ![Evidencia 20-32 - MPL de paginación OData V4](images/tema-20/20-32-cpi-odata-v4-paginacion-mpl-completed.png)
+
+### Resultado esperado y validación
+
+| Criterio | Resultado observado | Estado |
+|---|---|---|
+| Primera consulta sin token | HTTP 200, página hasta `ERNSH` | ✅ Validado |
+| Enlace de continuación de la primera página | `Nextlink` con `$skiptoken='ERNSH'` | ✅ Validado |
+| Segunda consulta con token | HTTP 200, página hasta `LACOR` | ✅ Validado |
+| Nuevo enlace de continuación | `Nextlink` con `$skiptoken='LACOR'` | ✅ Validado |
+| Ejecución CPI | MPL `Completed`, sin error intermedio | ✅ Validado |
+| Paginación automática en una sola ejecución CPI | No implementada ni demostrada | Fuera del alcance |
+| Operaciones de escritura OData | No implementadas ni demostradas | Fuera del alcance |
+
+### Restricciones y alcance de la validación
+
+La validación final se centra en **dos solicitudes HTTP independientes** y en la reutilización del token de continuación. No se han validado casos de token inválido, paginación concurrente, cambios de datos entre páginas ni tratamiento de errores del servicio.
+
+### Aprendizajes
+
+`$skiptoken` no es un desplazamiento numérico que el cliente deba calcular: es un valor de continuación definido por el servidor. `@odata.nextLink` y el header `Nextlink` observado en CPI permiten obtener ese valor para una nueva consulta. El Router ofrece dos caminos con configuraciones estáticas distintas de **Query Options**, sin necesidad de activar `Process in Pages`. El código HTTP de Postman y el estado MPL son verificaciones complementarias.
+
+**Referencias:** [OData V4 - URL Conventions](https://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part2-url-conventions.html) · [SAP Help - OData V4 Receiver Adapter](https://help.sap.com/docs/cloud-integration/sap-cloud-integration/configure-odata-v4-receiver-adapter)
+
 ## Estado de validación del capítulo
 
-Los laboratorios **20.1 a 20.5** cuentan con resultados prácticos validados y están **✅ Completados** dentro de sus alcances. El laboratorio **20.6** permanece **⬜ Pendiente**; el capítulo continúa **🟨 En curso**. La parametrización de `$filter` y `$top` desde CPI y el control de recursos permitidos no forman parte de las capacidades validadas en 20.4.
+Los laboratorios **20.1 a 20.6** cuentan con resultados prácticos validados dentro de sus alcances. El capítulo se considera **✅ Completado** para consultas OData V2/V4 y paginación explícita con token. No se implementaron operaciones de escritura ni paginación automática en CPI. La parametrización de `$filter` y `$top` desde CPI y el control de recursos permitidos no forman parte de las capacidades validadas en 20.4.
 
 ## Referencias
 
