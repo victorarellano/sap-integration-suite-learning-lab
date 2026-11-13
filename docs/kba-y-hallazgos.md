@@ -854,7 +854,7 @@ Se recargó la página del editor. Después de la recarga, fue posible insertar 
 
 La recarga de la página resolvió el síntoma en esta sesión. **No se determinó la causa técnica** y no existe evidencia suficiente para atribuirlo a un defecto general de SAP CPI, al navegador, al tenant o al runtime. Antes de reconstruir artefactos o modificar un diseño funcional por un problema de interacción del editor, comprobar si una recarga permite repetir la operación y validar luego el resultado guardado.
 
-## KBA — HTTP 415 al consultar una entidad OData V2 con `Accept: application/xml`
+## KBA - HTTP 415 al consultar una entidad OData V2 con `Accept: application/xml`
 
 **Origen:** capítulo 20.1, Northwind OData V2. **Estado:** corrección comprobada en Postman.
 
@@ -868,7 +868,7 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 
 **Evidencia:** capítulo 20, `20-04-postman-odata-customer-por-clave.png`; el HTTP 415 fue observado durante el diagnóstico.
 
-## KBA — Diferencia observada en la estructura JSON de colecciones Northwind con `$top`
+## KBA - Diferencia observada en la estructura JSON de colecciones Northwind con `$top`
 
 **Origen:** capítulo 20.2, Northwind OData V2. **Estado:** comportamiento observado; causa técnica no confirmada.
 
@@ -884,7 +884,7 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 
 **Evidencias:** `20-06-postman-odata-filter-country-germany.png`, `20-07-postman-odata-select-properties.png`, `20-08-postman-odata-orderby-desc-top5.png` y comprobación del header de respuesta.
 
-## KBA-LAB-021-A — Clave privada de host SSH rechazada en Docker sobre Windows
+## KBA-LAB-021-A - Clave privada de host SSH rechazada en Docker sobre Windows
 
 **Estado:** Resuelto en el entorno del laboratorio.
 
@@ -896,7 +896,7 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 
 **Alcance:** configuración local Docker + atmoz/sftp + volúmenes Windows observada en capítulo 21. El script exacto debe conservarse en el repositorio para reproducibilidad.
 
-## KBA-LAB-021-B — `Cannot access known hosts artifact` en SSH Connectivity Test
+## KBA-LAB-021-B - `Cannot access known hosts artifact` en SSH Connectivity Test
 
 **Estado:** Resuelto.
 
@@ -910,7 +910,7 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 
 **Alcance:** autenticación/conectividad SSH y acceso al directorio. No demuestra aún escritura SFTP mediante un iFlow.
 
-## KBA-LAB-021-C — Contraseña administrativa de SAP Cloud Connector olvidada
+## KBA-LAB-021-C - Contraseña administrativa de SAP Cloud Connector olvidada
 
 **Estado:** Incidente resuelto al recordar la contraseña; recuperación técnica no ejecutada.
 
@@ -921,3 +921,21 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 **Límite:** no se comprobó que reemplazar o importar un XML de usuarios permita restablecer la contraseña, ni se verificó el formato interno de almacenamiento de la credencial. No presentar la restauración del XML como método probado.
 
 **Prevención:** conservar un respaldo soportado por la versión de Cloud Connector y las credenciales administrativas en un gestor de contraseñas; verificar con documentación oficial la recuperación aplicable a la versión instalada antes de modificar archivos internos.
+
+## KBA-LAB-021-D - `Permission denied` al escribir mediante SFTP Receiver
+
+**Estado:** Resuelto y reproducido en laboratorio 21.2.
+
+**Contexto:** iFlow `LAB21_SFTP_Receiver`, SFTP Receiver con autenticación `LAB21_SFTP_BASIC`, proxy `On-Premise` y destino temporal `/upload/sin-permisos`.
+
+**Síntoma:** la petición HTTPS POST devolvió `500 Internal Server Error`. El mensaje en Monitor quedó `Failed`; `Last Error` incluyó `Permission denied`.
+
+**Diagnóstico comprobado:** el directorio `/home/labuser/upload/sin-permisos` existía, pertenecía a `root:root` y tenía permisos `555` (`dr-xr-xr-x`), que no permiten a `labuser` crear archivos. El mismo iFlow había escrito previamente en `/upload` con HTTP 200 y MPL Completed.
+
+**Corrección:** restaurar `Directory = /upload` en SFTP Receiver, guardar y desplegar. La nueva petición con `ORD-21004` devolvió HTTP 200; la lectura del archivo en Docker confirmó el contenido.
+
+**Alcance:** se verificó el rechazo de escritura por permisos y su propagación al endpoint HTTP y al MPL. No se probaron políticas de reintento ni gestión centralizada de errores.
+
+**Evidencias:** `21-09-sftp-receiver-error-permisos-postman.png`, `21-10-sftp-receiver-mpl-failed-permission-denied.png`; restauración validada con `ORD-21004`.
+
+**Aprendizaje:** el estado `Started` del iFlow y una conexión SFTP válida no garantizan permisos de escritura en todos los directorios remotos. Verificar permisos del destino y el `Last Error` antes de cambiar credenciales o configuración de Cloud Connector.

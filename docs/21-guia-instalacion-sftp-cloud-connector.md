@@ -1,8 +1,8 @@
-﻿# Guía reproducible — SFTP local con Docker y SAP Cloud Connector
+﻿# Guía reproducible - SFTP local con Docker y SAP Cloud Connector
 
-**Proyecto:** SAP Integration Suite Learning Lab  
-**Capítulo:** 21 — Integración SFTP y archivos  
-**Estado:** 🟨 En curso (infraestructura y conectividad comprobadas; operaciones de escritura/lectura mediante iFlow pendientes)  
+**Proyecto:** SAP Integration Suite Learning Lab
+**Capítulo:** 21 - Integración SFTP y archivos
+**Estado:** 🟨 En curso (infraestructura y conectividad comprobadas; operaciones de escritura/lectura mediante iFlow pendientes)
 **Plataforma comprobada:** Windows, Docker Compose v5.1.4, SAP Cloud Connector 2.16.2, SAP BTP en AWS US East (VA).
 
 > Esta guía distingue los pasos comprobados en el laboratorio de los parámetros que deben recuperarse de la configuración local. No se dispone en este documento del contenido íntegro del `compose.yaml`, `.env.example` ni del script de inicialización: no se reconstruyen como si fueran los originales. Para reproducir exactamente el entorno, conservar esos archivos sanitizados en Git.
