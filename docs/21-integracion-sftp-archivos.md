@@ -1,6 +1,6 @@
 # 21 - Integración SFTP y archivos
 
-**Estado del capítulo:** 🟨 En curso - laboratorios 21.1, 21.2, 21.3 y 21.4 completados; 21.5 y 21.6 pendientes.
+**Estado del capítulo:** ✅ Completado
 **Package:** `CPI Learning Lab`
 **Entorno:** SAP BTP Trial, SAP Cloud Integration, SAP Cloud Connector 2.16.2, Docker Desktop y servidor `atmoz/sftp` en Windows 11.
 
@@ -561,13 +561,173 @@ flowchart LR
 - [KBA y hallazgos](kba-y-hallazgos.md), `KBA-LAB-021-E` y `KBA-LAB-021-F`.
 
 
+## 21.6 - Errores, MPL y trazabilidad en procesamiento SFTP
+
+**Estado:** ✅ Completado.
+
+### Objetivo y conceptos
+
+Validar el tratamiento de una excepción controlada durante la lectura de archivos SFTP, conservar el estado `Failed` en el Message Processing Log (MPL), registrar información de diagnóstico mediante Custom Headers y comprobar que el flujo puede completar una ejecución posterior con contenido corregido.
+
+Se reutilizan el servidor SFTP, SAP Cloud Connector, la credencial `LAB21_SFTP_BASIC`, SSH Known Hosts y los conocimientos de Groovy, Exception Subprocess y monitorización de los capítulos anteriores.
+
+### Prerrequisitos
+
+- Conectividad SFTP hacia `sftp-learning-lab.internal:2222` mediante proxy `On-Premise`.
+- Directorio remoto `/upload`, correspondiente a `tools/sftp/data` en el entorno local.
+- Acceso al diseñador y a Monitor Message Processing de Cloud Integration.
+- Archivos de prueba sin datos sensibles.
+
+### Arquitectura implementada
+
+```mermaid
+flowchart LR
+    A["SFTP Sender /upload"] --> B["GRV_Validar_Archivo_SFTP.groovy"]
+    B --> C["End Event"]
+    B -. "Excepción" .-> D["Error Start"]
+    D --> E["CM_Registrar_Error_SFTP"]
+    E --> F["GRV_Registrar_MPL_SFTP.groovy"]
+    F --> G["Error End"]
+```
+
+**iFlow:** `LAB21_SFTP_Trazabilidad`. En Monitor se verificó la versión desplegada `1.0.0`, estado `Started` y despliegue del 17/11/2026 a las 16:09:54. No se modificaron los iFlows de los laboratorios anteriores.
+
+### Diseño y configuración
+
+1. Crear el iFlow `LAB21_SFTP_Trazabilidad` dentro de `CPI Learning Lab` y asociar un **SFTP Sender** al Start Event. Configurar el host virtual `sftp-learning-lab.internal:2222`, proxy `On-Premise`, autenticación `User Name/Password`, credencial `LAB21_SFTP_BASIC`, directorio `/upload` y filtro de archivos `lab21-06-*.txt`. El Scheduler se configuró con recurrencia cada cinco minutos, en zona horaria UTC. El filtro evita consumir archivos de otros laboratorios.
+2. Incorporar el script `GRV_Validar_Archivo_SFTP.groovy` entre Start y End, con función `processData`. Leer el cuerpo como texto y lanzar una excepción controlada cuando aparezca `ERROR_CONTROLADO`:
+
+   ```groovy
+   import com.sap.gateway.ip.core.customdev.util.Message
+
+   def Message processData(Message message) {
+       String contenido = message.getBody(String)
+
+       if (contenido.contains('ERROR_CONTROLADO')) {
+           throw new IllegalStateException(
+               'LAB21_06_ERROR_CONTROLADO: contenido de archivo rechazado'
+           )
+       }
+
+       return message
+   }
+   ```
+
+   La condición permite contrastar un archivo rechazado con otro cuyo contenido no activa la excepción.
+3. Agregar un **Exception Subprocess** con la secuencia **Error Start → Content Modifier → Groovy Script → Error End**. El Error End conserva el carácter fallido del procesamiento.
+4. En `CM_Registrar_Error_SFTP`, crear la Exchange Property `ErrorDetalle` con `Source Type = Expression` y valor `${exception.message}`. Esta propiedad no aparece automáticamente como Custom Header en el MPL.
+5. Asociar el recurso `GRV_Registrar_MPL_SFTP.groovy` al segundo Groovy Script, con función `processData`:
+
+   ```groovy
+   import com.sap.gateway.ip.core.customdev.util.Message
+
+   def Message processData(Message message) {
+       def log = messageLogFactory.getMessageLog(message)
+
+       if (log != null) {
+           def excepcion = message.getProperty('CamelExceptionCaught')
+           def detalle = excepcion != null
+               ? excepcion.getMessage()
+               : 'Excepcion sin detalle disponible'
+
+           def nombreArchivo = message.getHeader(
+               'CamelFileName', String
+           ) ?: 'NO_DISPONIBLE'
+
+           log.addCustomHeaderProperty(
+               'LAB21_ArchivoSFTP', nombreArchivo
+           )
+
+           log.addCustomHeaderProperty(
+               'LAB21_ErrorDetalle', detalle
+           )
+       }
+
+       return message
+   }
+   ```
+
+   `CamelExceptionCaught` recupera la excepción capturada; `CamelFileName` intenta recuperar el nombre del archivo; `addCustomHeaderProperty` registra los datos consultables en el MPL. No se registra el cuerpo completo del archivo.
+
+6. Guardar y desplegar el iFlow. El diseño se verificó sin entradas en la pestaña **Problems**, y el runtime quedó `Started`.
+
+   **Evidencia 21-30 - Diseño completo de trazabilidad SFTP.** Proceso principal y Exception Subprocess conectados antes del primer despliegue.
+
+   ![Evidencia 21-30 - Diseño completo del iFlow](images/tema-21/21-30-sftp-trazabilidad-iflow-diseno-completo.png)
+
+### Prueba negativa y diagnóstico
+
+7. Preparar un archivo de texto con la orden `ORD-21015`, cliente `CLIENTE-A` y `estado=ERROR_CONTROLADO`. La primera ejecución observada, a las 16:08:03, terminó `Completed`; ocurrió antes del despliegue registrado a las 16:09:54 y no constituye una prueba de la configuración final.
+8. Verificar la asociación del primer Groovy Script con `/script/GRV_Validar_Archivo_SFTP.groovy` y función `processData`. Tras comprobar que no aparecían nuevos MPL durante varios ciclos de polling, se realizó una nueva prueba con un nombre de archivo distinto, sin modificar el iFlow. No quedó demostrada la causa exacta de la ausencia de reprocesamiento del nombre anterior.
+9. El archivo procesado en la prueba negativa se llamó **`lab21-06-error 02.txt`**, con un espacio antes de `02`, y contenía:
+
+   ```text
+   ordenId=ORD-21015
+   cliente=CLIENTE-A
+   estado=ERROR_CONTROLADO
+   ```
+
+   El MPL del 17/11/2026 a las **16:30:03** terminó **Failed** en **539 ms**. `Last Error` identificó `java.lang.IllegalStateException` con el texto `LAB21_06_ERROR_CONTROLADO: contenido de archivo rechazado`, originado en la línea 7 de `GRV_Validar_Archivo_SFTP.groovy`.
+
+   **Evidencia 21-32 - Excepción controlada en MPL.** Ejecución `Failed` de las 16:30:03 y mensaje de error de Groovy.
+
+   ![Evidencia 21-32 - MPL Failed](images/tema-21/21-32-sftp-trazabilidad-error-controlado-mpl-failed.png)
+
+10. Inspeccionar los **Custom Headers** del MPL fallido. Se verificaron los dos valores registrados por el Exception Subprocess:
+
+    | Custom Header | Valor observado |
+    |---|---|
+    | `LAB21_ArchivoSFTP` | `lab21-06-error 02.txt` |
+    | `LAB21_ErrorDetalle` | `java.lang.Exception: java.lang.IllegalStateException: LAB21_06_ERROR_CONTROLADO: contenido de archivo rechazado@ line 7 in GRV_Validar_Archivo_SFTP.groovy` |
+
+    **Evidencia 21-33 - Custom Headers de trazabilidad.** Nombre del archivo y excepción visibles en el MPL fallido.
+
+    ![Evidencia 21-33 - Custom Headers](images/tema-21/21-33-sftp-trazabilidad-mpl-custom-headers.png)
+
+11. Comprobar en el directorio local que el archivo fallido permaneció en `/upload` después del MPL `Failed`. La observación confirma que no fue eliminado ni movido en esa ejecución; no prueba por sí sola si sería seleccionado nuevamente por el repositorio de idempotencia.
+
+### Recuperación y validación final
+
+12. Retirar los archivos de error del directorio vigilado y crear `lab21-06-recuperado.txt` con la misma orden y cliente, cambiando la condición a:
+
+    ```text
+    ordenId=ORD-21015
+    cliente=CLIENTE-A
+    estado=VALIDADO
+    ```
+
+    El nuevo nombre permite una prueba independiente de la selección previa del archivo fallido.
+
+13. Consultar Monitor Message Processing. El 17/11/2026 a las **16:35:03** se registró un nuevo MPL **Completed**, con duración de **431 ms**, sin modificar ni volver a desplegar el iFlow. El log estándar de esa ejecución no mostró el nombre del archivo procesado.
+
+    **Evidencia 21-34 - Ejecución exitosa posterior al error.** Monitor muestra el `Failed` de las 16:30:03 y el `Completed` de las 16:35:03.
+
+    ![Evidencia 21-34 - Recuperación Completed](images/tema-21/21-34-sftp-trazabilidad-recuperacion-mpl-completed.png)
+
+14. Verificar en `tools/sftp/data/` la presencia de `lab21-06-recuperado.txt` y la ausencia de los archivos fallidos. Confirmar en **Manage Integration Content** que `LAB21_SFTP_Trazabilidad` permanece `Started`, versión desplegada `1.0.0`.
+
+### Resultado esperado y validación
+
+| Comprobación | Resultado observado | Estado |
+|---|---|---|
+| Excepción Groovy ante `ERROR_CONTROLADO` | MPL `Failed`, 16:30:03; mensaje y origen identificados | ✅ |
+| Exception Subprocess y Error End | MPL conserva `Failed` y registra dos Custom Headers | ✅ |
+| Conservación del archivo fallido | Archivo observado en `/upload` tras el fallo | ✅ |
+| Ejecución posterior | MPL `Completed`, 16:35:03, sin cambios en el iFlow | ✅ |
+| Identificación del archivo en el MPL exitoso | No aparece en el log estándar; asociación directa no comprobada | No verificado |
+| Estado final | `LAB21_SFTP_Trazabilidad`, versión `1.0.0`, `Started` | ✅ |
+
+### Problemas encontrados, aprendizajes y límites
+
+- El MPL `Completed` de las 16:08:03 es anterior al último despliegue; no sirve para validar la lógica desplegada a las 16:09:54.
+- La ausencia de una segunda ejecución para el nombre inicial es compatible con la configuración de idempotencia, pero no se verificó el registro interno del repositorio. No se atribuye una causa definitiva.
+- Los Custom Headers se añadieron exclusivamente en la ruta de excepción. Por ello, el MPL exitoso no ofrece la misma trazabilidad del nombre del archivo. La existencia de `lab21-06-recuperado.txt` en el directorio y la ejecución `Completed` posterior respaldan el escenario de recuperación, pero **no demuestran directamente qué archivo consumió esa ejecución**.
+- `Error End` permitió conservar el resultado `Failed` del error controlado, mientras que `addCustomHeaderProperty` hizo visibles los datos de diagnóstico en Monitor.
+- No se probaron reintentos automáticos, reprocesamiento manual del mismo nombre, concurrencia, retención del repositorio de idempotencia ni persistencia de payloads.
+
 ## Referencias y documentación complementaria
 
 - [SAP Integration Suite - SAP Help Portal](https://help.sap.com/docs/integration-suite)
 - [SAP Cloud Connector - SAP Help Portal](https://help.sap.com/docs/connectivity)
 - [Guía de instalación SFTP y Cloud Connector](21-guia-instalacion-sftp-cloud-connector.md)
 - [KBA y hallazgos](kba-y-hallazgos.md) - `KBA-LAB-021-A`, `021-B`, `021-C` y `021-D`.
-
-## Estado del capítulo
-
-**21.1:** ✅ Completado. **21.2:** ✅ Completado. **21.3:** ✅ Completado. **21.4:** ✅ Completado. **21.5:** ✅ Completado. **21.6:** ⬜ Pendiente. **Capítulo 21:** 🟨 En curso.
