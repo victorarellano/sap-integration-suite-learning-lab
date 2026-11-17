@@ -1,0 +1,3 @@
+ordenId=ORD-21015
+cliente=CLIENTE-A
+estado=ERROR_CONTROLADO
