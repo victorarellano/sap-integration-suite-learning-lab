@@ -418,9 +418,6 @@ Las dos políticas se validaron **secuencialmente**, cambiando la configuración
 - Un MPL `Completed` demuestra el éxito del procesamiento registrado, pero la comprobación del efecto sobre el archivo requiere inspeccionar también el servidor SFTP.
 - El archivado se probó con un archivo y un directorio de destino preparado previamente. No se ensayaron fallos de archivado, reintentos, concurrencia ni políticas de retención.
 
-
-
-
 ## 21.5 - Transformaciones de archivos CSV a XML
 
 **Estado:** ✅ Completado.
