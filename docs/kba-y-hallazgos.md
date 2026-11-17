@@ -939,3 +939,37 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 **Evidencias:** `21-09-sftp-receiver-error-permisos-postman.png`, `21-10-sftp-receiver-mpl-failed-permission-denied.png`; restauración validada con `ORD-21004`.
 
 **Aprendizaje:** el estado `Started` del iFlow y una conexión SFTP válida no garantizan permisos de escritura en todos los directorios remotos. Verificar permisos del destino y el `Last Error` antes de cambiar credenciales o configuración de Cloud Connector.
+
+## KBA-LAB-021-E - Advertencia de compatibilidad entre SFTP Sender y CSV to XML Converter
+
+**Estado:** Advertencia identificada; procesamiento exitoso en el escenario probado.
+
+**Origen:** Laboratorio 21.5, iFlow `LAB21_SFTP_Transformacion`.
+
+**Síntoma:** el editor mostró `SFTP Sender may not pass Text message to CSV To XML Converter. CSV To XML Converter supports Text input only.` y un indicador naranja en el conversor.
+
+**Diagnóstico:** la advertencia identifica una posible incompatibilidad de tipos de mensaje. No se confirmó un fallo efectivo para el CSV probado.
+
+**Validación:** el 17/11/2026 el iFlow terminó `Completed` (4 s 544 ms) y escribió `/upload/salida-21-5/lab21-05-ordenes.xml` con tres órdenes correctas.
+
+**Solución y alcance:** no se introdujeron cambios para eliminar la advertencia porque el escenario probado funcionó. Esto no garantiza compatibilidad con otros formatos o codificaciones.
+
+**Evidencias:** `21-24-sftp-transformacion-iflow-diseno-final.png`, `21-25-csv-xml-converter-warning-tipo-mensaje.png`, `21-22-sftp-transformacion-mpl-completed.png` y `21-23-sftp-transformacion-xml-generado.png`.
+
+## KBA-LAB-021-F - `IndexOutOfBoundsException` durante conversión de CSV con dato no numérico
+
+**Estado:** Fallo reproducido en el caso negativo; causa interna exacta no confirmada.
+
+**Origen:** Laboratorio 21.5, iFlow `LAB21_SFTP_Transformacion`, versión final confirmada `1.0.1`.
+
+**Síntoma:** el archivo `lab21-05-ordenes-invalidas.csv` contenía `MONTO_INVALIDO` en la columna `monto`, definida como `xs:decimal` en el XSD. El MPL terminó `Failed` el 17/11/2026 a las 15:07:13, duración 327 ms, con `java.lang.IndexOutOfBoundsException: Index 0 out of bounds for length 0`.
+
+**Diagnóstico comprobado:** el log situó la excepción en `CallActivity_5`, `bean[ref:csvtoxmlprocessorCallActivity_5 method:process]`, correspondiente al CSV to XML Converter. No se observó un mensaje explícito de validación de `xs:decimal`.
+
+**Prueba de control:** se creó `lab21-05-ordenes-control.csv` con los mismos registros, sustituyendo únicamente `MONTO_INVALIDO` por `27500`. El MPL terminó `Completed` a las 15:13:05 (2 s 488 ms), y el XML de salida incluyó las órdenes `ORD-21012`, `ORD-21013` y `ORD-21014` con montos 15000, 27500 y 32000.
+
+**Conclusión y alcance:** el cambio del dato coincide con la diferencia de resultado entre la prueba negativa y el control, y el fallo se localizó en el conversor. No se puede afirmar que `IndexOutOfBoundsException` sea el mecanismo normal de validación decimal ni identificar la causa interna exacta sin más diagnóstico.
+
+**Mitigación:** validar el formato de los datos de entrada antes de depender del resultado del conversor, cuando el escenario requiera manejo explícito de errores. No se implementó esa validación adicional en 21.5. El operador retiró los archivos de prueba del directorio vigilado tras la comprobación.
+
+**Evidencias:** `21-26-sftp-transformacion-csv-invalido-mpl-failed.png`, `21-27-sftp-transformacion-error-csv-to-xml-processor.png`, `21-28-sftp-transformacion-prueba-control-mpl.png`, `21-29-sftp-transformacion-prueba-control-xml.png`.

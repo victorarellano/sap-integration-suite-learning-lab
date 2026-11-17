@@ -1,0 +1,5 @@
+LAB21-SFTP-SENDER
+Orden: ORD-21005
+Origen: Servidor SFTP Docker
+Destino: SAP Cloud Integration
+Prueba: Lectura mediante polling

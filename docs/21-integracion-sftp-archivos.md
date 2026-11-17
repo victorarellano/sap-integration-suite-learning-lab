@@ -1,6 +1,6 @@
 # 21 - Integración SFTP y archivos
 
-**Estado del capítulo:** 🟨 En curso — laboratorios 21.1, 21.2, 21.3 y 21.4 completados; 21.5 y 21.6 pendientes.
+**Estado del capítulo:** 🟨 En curso - laboratorios 21.1, 21.2, 21.3 y 21.4 completados; 21.5 y 21.6 pendientes.
 **Package:** `CPI Learning Lab`
 **Entorno:** SAP BTP Trial, SAP Cloud Integration, SAP Cloud Connector 2.16.2, Docker Desktop y servidor `atmoz/sftp` en Windows 11.
 
@@ -14,8 +14,8 @@ Implementar integraciones de archivos mediante SFTP en SAP Cloud Integration, ut
 |---|---|---|---|
 | 21.1 | Infraestructura, seguridad y conectividad SFTP | ✅ Completado | Variable por instalación |
 | 21.2 | Escritura de archivos mediante SFTP Receiver | ✅ Completado | 45–60 min |
-| 21.3 | Lectura de archivos mediante SFTP Sender, polling e idempotencia | ✅ Completado | — |
-| 21.4 | Ciclo de vida de archivos: Move File y Delete File | ✅ Completado | — |
+| 21.3 | Lectura de archivos mediante SFTP Sender, polling e idempotencia | ✅ Completado | - |
+| 21.4 | Ciclo de vida de archivos: Move File y Delete File | ✅ Completado | - |
 | 21.5 | Transformaciones de archivos | ⬜ Pendiente | Por definir en diseño |
 | 21.6 | Errores, MPL y trazabilidad | ⬜ Pendiente | Por definir en diseño |
 
@@ -245,41 +245,41 @@ flowchart LR
 5. Seleccionar **Post-Processing** `Keep File and Mark as Processed in Idempotent Repository`, con **Idempotent Repository** `Database`. Se conserva el archivo de origen y se utiliza un registro de procesamiento para evitar consumirlo repetidamente.
 6. En **Scheduler**, configurar sondeo **Daily**, cada **5 minutos**, dentro del intervalo **00:00–24:00 GMT**. Guardar y desplegar el iFlow; comprobar `Started`.
 
-**Evidencia 21-11 — SFTP Sender desplegado e iniciado.** El runtime muestra `LAB21_SFTP_Sender` operativo para iniciar lecturas por polling.
+**Evidencia 21-11 - SFTP Sender desplegado e iniciado.** El runtime muestra `LAB21_SFTP_Sender` operativo para iniciar lecturas por polling.
 
-![Evidencia 21-11 — SFTP Sender Started](images/tema-21/21-11-sftp-sender-deployed-started.png)
+![Evidencia 21-11 - SFTP Sender Started](images/tema-21/21-11-sftp-sender-deployed-started.png)
 
 ### Prueba de lectura y polling
 
 7. Crear en el directorio local vinculado a `/upload` el archivo `lab21-03-entrada.txt`, con contenido de prueba que incluya `ORD-21005`. Mantener el filtro específico del archivo y esperar el siguiente sondeo.
 8. Revisar **Monitor → Message Processing**. Se observó un MPL `Completed` el **17/11/2026 a las 11:45:05**, con duración de **439 ms**. El archivo original de **133 bytes** fue leído por el adaptador.
 
-**Evidencia 21-12 — Mensaje procesado correctamente.** MPL `Completed` correspondiente a la lectura del archivo de entrada.
+**Evidencia 21-12 - Mensaje procesado correctamente.** MPL `Completed` correspondiente a la lectura del archivo de entrada.
 
-![Evidencia 21-12 — MPL Completed](images/tema-21/21-12-sftp-sender-mpl-completed.png)
+![Evidencia 21-12 - MPL Completed](images/tema-21/21-12-sftp-sender-mpl-completed.png)
 
 ### Prueba de idempotencia
 
 9. Mantener el archivo original en `/upload` y observar el monitor durante **8 minutos y 50 segundos**, intervalo superior a un ciclo de polling. No se registró un nuevo procesamiento del mismo archivo en el periodo observado. Este resultado valida el comportamiento en la ventana de prueba, sin establecer garantías sobre todas las condiciones de reinicio o retención del repositorio.
 
-**Evidencia 21-13 — Ausencia de reprocesamiento observado.** El monitor permite contrastar la ejecución inicial con la ventana de observación posterior.
+**Evidencia 21-13 - Ausencia de reprocesamiento observado.** El monitor permite contrastar la ejecución inicial con la ventana de observación posterior.
 
-![Evidencia 21-13 — Idempotencia observada](images/tema-21/21-13-sftp-sender-idempotencia-sin-reprocesamiento.png)
+![Evidencia 21-13 - Idempotencia observada](images/tema-21/21-13-sftp-sender-idempotencia-sin-reprocesamiento.png)
 
 ### Inspección del payload con Trace
 
 10. Conservar la política de idempotencia y ampliar el filtro a `lab21-03-*.txt` (Regex Filtering desactivado). Guardar y desplegar los cambios. Crear el archivo `lab21-03-trace.txt` con la orden `ORD-21006`, de **147 bytes**.
 11. Activar temporalmente **Trace** en Monitor, esperar el polling y revisar el cuerpo del mensaje. El payload recuperado coincidió con el contenido del archivo de prueba. Restablecer el nivel de registro a **Info** al terminar.
 
-**Evidencia 21-14 — Payload de archivo validado mediante Trace.** El cuerpo leído en CPI coincide con el archivo `lab21-03-trace.txt`.
+**Evidencia 21-14 - Payload de archivo validado mediante Trace.** El cuerpo leído en CPI coincide con el archivo `lab21-03-trace.txt`.
 
-![Evidencia 21-14 — Trace del payload](images/tema-21/21-14-sftp-sender-trace-payload-validado.png)
+![Evidencia 21-14 - Trace del payload](images/tema-21/21-14-sftp-sender-trace-payload-validado.png)
 
 12. Comprobar en Docker que los archivos de prueba permanecen en el directorio de origen tras su procesamiento, de acuerdo con la política `Keep File`.
 
-**Evidencia 21-15 — Archivo conservado en SFTP.** Verificación del archivo original después de su lectura.
+**Evidencia 21-15 - Archivo conservado en SFTP.** Verificación del archivo original después de su lectura.
 
-![Evidencia 21-15 — Archivo conservado](images/tema-21/21-15-sftp-sender-archivo-conservado.png)
+![Evidencia 21-15 - Archivo conservado](images/tema-21/21-15-sftp-sender-archivo-conservado.png)
 
 ### Resultado, validación y aprendizajes
 
@@ -345,13 +345,13 @@ Las dos políticas se validaron **secuencialmente**, cambiando la configuración
    docker exec sap-learning-lab-sftp ls -l /home/labuser/upload/archivo-21-4/
    ```
 
-   **Evidencia 21-16 — Archivado posterior al procesamiento.** El archivo desapareció del origen y apareció en el directorio de archivado.
+   **Evidencia 21-16 - Archivado posterior al procesamiento.** El archivo desapareció del origen y apareció en el directorio de archivado.
 
-   ![Evidencia 21-16 — Move File archivado](images/tema-21/21-16-sftp-move-file-archivado.png)
+   ![Evidencia 21-16 - Move File archivado](images/tema-21/21-16-sftp-move-file-archivado.png)
 
-   **Evidencia 21-17 — MPL de Move File completado.** La ejecución que originó el movimiento terminó en `Completed`.
+   **Evidencia 21-17 - MPL de Move File completado.** La ejecución que originó el movimiento terminó en `Completed`.
 
-   ![Evidencia 21-17 — Move File MPL Completed](images/tema-21/21-17-sftp-move-file-mpl-completed.png)
+   ![Evidencia 21-17 - Move File MPL Completed](images/tema-21/21-17-sftp-move-file-mpl-completed.png)
 
 6. Leer el contenido archivado para verificar que la operación conservó el mensaje original:
 
@@ -361,9 +361,9 @@ Las dos políticas se validaron **secuencialmente**, cambiando la configuración
 
    La salida incluyó las líneas originales y la orden `ORD-21007`.
 
-   **Evidencia 21-18 — Contenido conservado después del archivado.** Lectura del archivo archivado con `ORD-21007`.
+   **Evidencia 21-18 - Contenido conservado después del archivado.** Lectura del archivo archivado con `ORD-21007`.
 
-   ![Evidencia 21-18 — Move File contenido conservado](images/tema-21/21-18-sftp-move-file-contenido-conservado.png)
+   ![Evidencia 21-18 - Move File contenido conservado](images/tema-21/21-18-sftp-move-file-contenido-conservado.png)
 
 ### Prueba 2: Delete File
 
@@ -381,9 +381,9 @@ Las dos políticas se validaron **secuencialmente**, cambiando la configuración
 
 10. Desplegar el iFlow y comprobar `Started`. En **Monitor → Message Processing** se observó un MPL **Completed** el **17/11/2026 a las 12:35:03**, con duración de **442 ms** y resultado `Message processing completed successfully`.
 
-    **Evidencia 21-19 — MPL de Delete File completado.** CPI completó el procesamiento de la prueba de eliminación.
+    **Evidencia 21-19 - MPL de Delete File completado.** CPI completó el procesamiento de la prueba de eliminación.
 
-    ![Evidencia 21-19 — Delete File MPL Completed](images/tema-21/21-19-sftp-delete-file-mpl-completed.png)
+    ![Evidencia 21-19 - Delete File MPL Completed](images/tema-21/21-19-sftp-delete-file-mpl-completed.png)
 
 11. Verificar en Docker la ausencia del archivo de prueba:
 
@@ -393,9 +393,9 @@ Las dos políticas se validaron **secuencialmente**, cambiando la configuración
 
     La salida fue `No such file or directory`. La comprobación se realizó después del MPL exitoso y sobre el archivo descartable preparado para esta prueba.
 
-    **Evidencia 21-20 — Archivo eliminado del origen.** Docker confirma que `lab21-04-delete.txt` no está presente después del procesamiento.
+    **Evidencia 21-20 - Archivo eliminado del origen.** Docker confirma que `lab21-04-delete.txt` no está presente después del procesamiento.
 
-    ![Evidencia 21-20 — Delete File archivo eliminado](images/tema-21/21-20-sftp-delete-file-eliminado.png)
+    ![Evidencia 21-20 - Delete File archivo eliminado](images/tema-21/21-20-sftp-delete-file-eliminado.png)
 
 ### Restauración y estado final
 
@@ -418,12 +418,158 @@ Las dos políticas se validaron **secuencialmente**, cambiando la configuración
 - Un MPL `Completed` demuestra el éxito del procesamiento registrado, pero la comprobación del efecto sobre el archivo requiere inspeccionar también el servidor SFTP.
 - El archivado se probó con un archivo y un directorio de destino preparado previamente. No se ensayaron fallos de archivado, reintentos, concurrencia ni políticas de retención.
 
+
+
+
+## 21.5 - Transformaciones de archivos CSV a XML
+
+**Estado:** ✅ Completado.
+
+### Objetivo y conceptos
+
+Implementar un flujo SFTP de extremo a extremo que lea un archivo CSV, convierta sus registros a XML mediante el componente nativo **CSV to XML Converter** y escriba el resultado en otro directorio SFTP. El XSD define la estructura de salida y el elemento repetible correspondiente a cada fila. Se reutilizan la conectividad SFTP, Cloud Connector y las credenciales validadas en 21.1–21.4.
+
+### Prerrequisitos
+
+- Servidor SFTP local, SAP Cloud Connector, credencial `LAB21_SFTP_BASIC` y SSH Known Hosts operativos.
+- Directorio `/upload` disponible y directorio de salida `/upload/salida-21-5` creado con permisos de escritura para `labuser`.
+- Esquema local `docs/xsd/tema-21/LAB21_05_Ordenes.xsd`.
+- Archivos CSV de prueba en UTF-8, con separador coma.
+
+### Arquitectura implementada
+
+```mermaid
+flowchart LR
+    A["SFTP: /upload/lab21-05-*.csv"] --> B["SFTP Sender"]
+    B --> C["CSV to XML Converter"]
+    C --> D["SFTP Receiver"]
+    D --> E["SFTP: /upload/salida-21-5/lab21-05-ordenes.xml"]
+```
+
+**iFlow:** `LAB21_SFTP_Transformacion`, versión numerada final confirmada `1.0.1`, desplegado y con runtime `Started`. El flujo se creó independientemente de `LAB21_SFTP_Sender` para conservar los laboratorios anteriores.
+
+### Configuración y procedimiento
+
+1. Crear `LAB21_SFTP_Transformacion` en `CPI Learning Lab`, guardar y registrar una versión inicial antes de configurar componentes. El versionado proporciona un punto de recuperación previo a las pruebas.
+2. Conectar **SFTP Sender** al Start Event. Utilizar `sftp-learning-lab.internal:2222`, proxy `On-Premise`, credencial `LAB21_SFTP_BASIC`, directorio `/upload` y filtro `lab21-05-*.csv`. Configurar conservación e idempotencia mediante repositorio `Database` para evitar reprocesar archivos ya reconocidos. El filtro separa este laboratorio de los anteriores.
+3. Incorporar **CSV to XML Converter** entre Start y End. Cargar `LAB21_05_Ordenes.xsd` mediante **XML Schema → Select → Upload from File System**. El XSD define raíz `Ordenes`, elemento repetible `Orden` y campos `ordenId` (`xs:string`), `cliente` (`xs:string`) y `monto` (`xs:decimal`).
+4. Configurar el conversor:
+
+   | Campo | Valor |
+   |---|---|
+   | XML Schema | `LAB21_05_Ordenes.xsd` |
+   | Path to Target Element in XSD | `/Ordenes/Orden` |
+   | Record Marker in CSV | Vacío |
+   | Field Separator in CSV | `Comma (,)` |
+   | Exclude First Line Header | Activado |
+
+   La ruta selecciona el elemento XML repetible para cada registro CSV; el encabezado se excluye porque no representa una orden.
+
+   **Evidencia 21-21 - Configuración inicial del conversor.** Panel de Processing antes de cargar el esquema, mostrando campos obligatorios y opciones disponibles.
+
+   ![Evidencia 21-21 - CSV to XML Converter](images/tema-21/21-21-csv-to-xml-converter-configuracion.png)
+
+5. Conectar el **SFTP Receiver** al proceso y configurarlo con el mismo host, proxy y credencial. Utilizar `Directory = /upload/salida-21-5` y `File Name = lab21-05-ordenes.xml`. El directorio de salida evita mezclar archivos de entrada con resultados. El nombre fijo implica que las ejecuciones exitosas posteriores pueden sobrescribir el XML anterior.
+6. Guardar y registrar la versión numerada antes del despliegue. La versión final confirmada del iFlow fue `1.0.1`. Crear en `/upload` el archivo `lab21-05-ordenes.csv`:
+
+   ```csv
+   ordenId,cliente,monto
+   ORD-21009,CLIENTE-A,15000
+   ORD-21010,CLIENTE-B,27500
+   ORD-21011,CLIENTE-C,32000
+   ```
+
+7. Desplegar el iFlow y esperar el polling. En Monitor se registró **Completed** el 17/11/2026 a las 14:56:37 (GMT-03:00), duración **4 s 544 ms**.
+
+   **Evidencia 21-22 - MPL de transformación completado.** Estado `Completed` de la ejecución positiva.
+
+   ![Evidencia 21-22 - MPL Completed](images/tema-21/21-22-sftp-transformacion-mpl-completed.png)
+
+8. Inspeccionar `tools/sftp/data/salida-21-5/lab21-05-ordenes.xml`. Se observaron tres elementos `Orden`, con los identificadores, clientes y montos del CSV original.
+
+   **Evidencia 21-23 - XML generado.** Archivo XML en el directorio de salida, con tres registros transformados.
+
+   ![Evidencia 21-23 - XML generado](images/tema-21/21-23-sftp-transformacion-xml-generado.png)
+
+9. Verificar el diseño desplegado: SFTP Sender → CSV to XML Converter → SFTP Receiver, runtime `Started`. El editor mostró una advertencia naranja en el conversor.
+
+   **Evidencia 21-24 - Diseño final del iFlow.** Arquitectura desplegada y advertencia visible.
+
+   ![Evidencia 21-24 - Diseño final](images/tema-21/21-24-sftp-transformacion-iflow-diseno-final.png)
+
+10. Revisar **Problems**. El editor indicó: `SFTP Sender may not pass Text message to CSV To XML Converter. CSV To XML Converter supports Text input only.` La advertencia señala una posible incompatibilidad de tipos, pero no impidió la ejecución positiva observada. No se añadió código ni un componente adicional para eliminarla. Véase `KBA-LAB-021-E`.
+
+    **Evidencia 21-25 - Advertencia de tipos de mensaje.** Texto exacto mostrado por el editor.
+
+    ![Evidencia 21-25 - Warning de tipos](images/tema-21/21-25-csv-xml-converter-warning-tipo-mensaje.png)
+
+### Prueba negativa y control
+
+11. Crear en `/upload` `lab21-05-ordenes-invalidas.csv`:
+
+    ```csv
+    ordenId,cliente,monto
+    ORD-21012,CLIENTE-A,15000
+    ORD-21013,CLIENTE-B,MONTO_INVALIDO
+    ORD-21014,CLIENTE-C,32000
+    ```
+
+    La ejecución del 17/11/2026 a las 15:07:13 terminó **Failed** (327 ms), con `java.lang.IndexOutOfBoundsException: Index 0 out of bounds for length 0`.
+
+    **Evidencia 21-26 - MPL Failed del CSV inválido.** Error registrado en el procesamiento.
+
+    ![Evidencia 21-26 - MPL Failed](images/tema-21/21-26-sftp-transformacion-csv-invalido-mpl-failed.png)
+
+12. Revisar el log detallado. El fallo se localizó en `CallActivity_5`, actividad `bean[ref:csvtoxmlprocessorCallActivity_5 method:process]`. La excepción ocurrió en el conversor; el log no identifica explícitamente una validación del campo decimal.
+
+    **Evidencia 21-27 - Error en CSV to XML Converter.** Segmento del log con actividad y excepción.
+
+    ![Evidencia 21-27 - Procesador CSV a XML](images/tema-21/21-27-sftp-transformacion-error-csv-to-xml-processor.png)
+
+13. Crear `lab21-05-ordenes-control.csv`, conservando los tres registros anteriores y reemplazando únicamente `MONTO_INVALIDO` por `27500`. El MPL del 17/11/2026 a las 15:13:05 terminó **Completed**, en **2 s 488 ms**. En la ventana de monitorización se observaron cuatro ejecuciones: tres `Completed` y una `Failed`; otra ejecución `Completed` de las 15:07:25 no quedó asociada de forma concluyente a un archivo.
+
+    **Evidencia 21-28 - MPL de prueba de control.** Ejecución `Completed` posterior al cambio del dato.
+
+    ![Evidencia 21-28 - MPL de control](images/tema-21/21-28-sftp-transformacion-prueba-control-mpl.png)
+
+14. Inspeccionar el XML sobrescrito en el directorio de salida. Se verificaron `ORD-21012` (15000), `ORD-21013` (27500) y `ORD-21014` (32000), bajo raíz `Ordenes`.
+
+    **Evidencia 21-29 - XML de prueba de control.** Los tres registros con valores esperados.
+
+    ![Evidencia 21-29 - XML de control](images/tema-21/21-29-sftp-transformacion-prueba-control-xml.png)
+
+15. Verificar el estado final. El operador confirmó la versión `1.0.1`, la presencia del archivo inválido en el directorio SFTP durante la comprobación y la ausencia de nuevos `Failed` en la ventana de una hora mostrada. Posteriormente confirmó que movió los archivos de prueba fuera del directorio vigilado. No se modificó ni redeplegó el iFlow para esta limpieza.
+
+### Resultados y validación
+
+| Caso | Evidencia práctica | Estado |
+|---|---|---|
+| CSV válido → XML | MPL Completed y tres órdenes correctas en el archivo de salida | ✅ |
+| Diseño desplegado | SFTP Sender → CSV to XML Converter → SFTP Receiver; Started | ✅ |
+| CSV con `MONTO_INVALIDO` | MPL Failed y excepción en `csvtoxmlprocessor` | ✅ Fallo observado |
+| CSV de control numérico | MPL Completed y XML con tres órdenes correctas | ✅ |
+| Limpieza | Archivos de prueba retirados del directorio vigilado, según confirmación del operador | ✅ |
+
+### Problemas encontrados y aprendizajes
+
+- **Advertencia de compatibilidad:** el editor advierte que SFTP Sender podría no entregar un mensaje Text al conversor. La ejecución positiva demuestra funcionamiento para el CSV probado, no compatibilidad universal. Véase `KBA-LAB-021-E`.
+- **Error con CSV inválido:** el procesador CSV a XML lanzó `IndexOutOfBoundsException`. El cambio controlado del valor no numérico por uno numérico coincidió con el paso de `Failed` a `Completed`; la causa interna exacta de la excepción no quedó demostrada. Véase `KBA-LAB-021-F`.
+- **Salida con nombre fijo:** las ejecuciones exitosas pueden sobrescribir el archivo XML previo. Por eso se validó el contenido tras cada prueba.
+- **Idempotencia:** conservar archivos en origen no garantiza por sí solo que se reprocesen; el comportamiento debe contrastarse con los MPL y la configuración efectiva.
+- **Alcance:** no se verificaron otras codificaciones, delimitadores, validación exhaustiva contra XSD, múltiples archivos concurrentes ni reintentos automáticos.
+
+### Referencias
+
+- [SAP Integration Suite - documentación oficial](https://help.sap.com/docs/integration-suite)
+- [KBA y hallazgos](kba-y-hallazgos.md), `KBA-LAB-021-E` y `KBA-LAB-021-F`.
+
+
 ## Referencias y documentación complementaria
 
 - [SAP Integration Suite - SAP Help Portal](https://help.sap.com/docs/integration-suite)
 - [SAP Cloud Connector - SAP Help Portal](https://help.sap.com/docs/connectivity)
 - [Guía de instalación SFTP y Cloud Connector](21-guia-instalacion-sftp-cloud-connector.md)
-- [KBA y hallazgos](kba-y-hallazgos.md) — `KBA-LAB-021-A`, `021-B`, `021-C` y `021-D`.
+- [KBA y hallazgos](kba-y-hallazgos.md) - `KBA-LAB-021-A`, `021-B`, `021-C` y `021-D`.
 
 ## Estado del capítulo
 

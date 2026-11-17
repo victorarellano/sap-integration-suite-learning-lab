@@ -20,7 +20,7 @@ Antes de proponer instrucciones prácticas:
 
 Si algún archivo no está disponible, informarlo explícitamente. No asumir su contenido ni comenzar una implementación que dependa de él.
 
-## 2.1. Investigación técnica y aprobación del diseño antes de cada laboratorio
+### 2.1. Investigación técnica y aprobación del diseño antes de cada laboratorio
 
 **Obligatorio antes de crear, versionar o modificar un iFlow.** Esta fase se realiza después de revisar el estado del repositorio y antes del primer paso práctico.
 
@@ -51,7 +51,7 @@ Si algún archivo no está disponible, informarlo explícitamente. No asumir su 
 
 **Criterio de entrada al laboratorio:** no iniciar la implementación mientras falten fuentes esenciales, el diseño no sea viable o el usuario no haya aprobado el alcance.
 
-## 2.2. Presentación inicial obligatoria del capítulo: alcance, tiempos y diagramas
+### 2.2. Presentación inicial obligatoria del capítulo: alcance, tiempos y diagramas
 
 **Aplicación:** desde el capítulo 18 y para todos los capítulos restantes o adicionales. Esta presentación se realiza después de consultar los documentos de la sección 2 y antes de la investigación detallada, aprobación del diseño e implementación descritas en 2.1.
 
@@ -93,10 +93,10 @@ Esta presentación no sustituye la ficha de diseño técnico ni la investigació
 
 1. Presentar el objetivo específico y explicar por qué se realizará el ejercicio.
 2. Identificar el iFlow y los recursos que se utilizarán. Antes de modificar un iFlow existente o crear una nueva versión, avisar y esperar confirmación.
-3. Indicar **un solo paso práctico a la vez**, con los valores exactos de configuración y su justificación.
-4. Informar **antes de solicitar una captura** el nombre exacto del archivo de evidencia.
-5. Esperar la captura o el resultado del usuario y verificar lo que efectivamente demuestra.
-6. Registrar el resultado validado y avanzar al siguiente paso. Si hay un error, diagnosticarlo antes de continuar.
+4. Indicar una unidad funcional de trabajo por vez, con los valores exactos y la justificación técnica. Una unidad funcional puede comprender varias acciones estrechamente relacionadas (por ejemplo, configurar todos los campos de un adaptador, guardar y verificar su estado). No dividir artificialmente acciones dependientes en sucesivos turnos de confirmación. Esperar validación del usuario al terminar cada unidad funcional. Si una acción supone riesgo, modificación de un iFlow existente, versionado o despliegue, solicitar la aprobación específica prevista en esta metodología.
+5. Informar **antes de solicitar una captura** el nombre exacto del archivo de evidencia.
+6. Esperar la captura o el resultado del usuario y verificar lo que efectivamente demuestra.
+7. Registrar el resultado validado y avanzar al siguiente paso. Si hay un error, diagnosticarlo antes de continuar.
 
 No afirmar que un despliegue, una prueba o una configuración funciona si todavía no existe evidencia suficiente.
 
@@ -127,6 +127,10 @@ La numeración continúa a lo largo de todo el capítulo y no se reinicia por la
 - Verificar que el contenido de la captura respalde la afirmación documentada.
 - Si una captura no demuestra el resultado esperado, solicitar la comprobación faltante sin marcar el paso como validado.
 - No incluir capturas con contraseñas, tokens, client secrets, service keys o material sensible. Si se expone una credencial real, rotarla y excluir la captura.
+- Diseño final del iFlow: cuando un laboratorio cree o modifique la arquitectura de un iFlow, solicitar una captura del diagrama final que permita identificar participantes, componentes, adaptadores y conexiones, preferentemente después del despliegue o de la configuración definitiva. Definir el nombre correlativo de la evidencia antes de pedirla e incorporarla en el paso de diseño o validación correspondiente. No repetirla si ya existe una captura vigente que demuestre exactamente la misma arquitectura.
+- Planificación de evidencias: identificar desde la ficha de diseño previa qué capturas se necesitarán para demostrar configuración relevante, diseño final, MPL y resultado funcional. Ajustar el plan si la implementación cambia, sin crear evidencias redundantes.
+- Cierre de evidencias: antes de consolidar un laboratorio, contrastar los archivos recibidos con los nombres y propósitos previstos. Si una captura no existe o no demuestra el resultado, informarlo y mantener el estado correspondiente; no insertar enlaces a imágenes supuestas.
+
 
 ### 4.3. Referencias en Markdown
 
@@ -383,6 +387,12 @@ Antes de ofrecer los archivos descargables, comprobar:
 - Diferenciar laboratorios completados con evidencia práctica (`✅ Completado`) de temas solo analizados (`🟦 Revisado`) o todavía en curso (`🟨 En curso`).
 - Evitar pruebas, capturas y repeticiones que no aporten evidencia nueva.
 - El usuario revisa y publica los archivos en GitHub; el asistente no realiza commits salvo autorización expresa.
+- Momento de consolidación: respetar el corte de documentación establecido por el capítulo y acordado con el usuario. Que una prueba termine correctamente no autoriza por sí solo a generar o publicar documentación anticipadamente. Si surge una excepción, proponerla y obtener aprobación antes de preparar el entregable.
+- Documento completo: entregar un Markdown consolidado que conserve íntegros los laboratorios anteriores y añada los nuevos, no una sección aislada para ensamblar manualmente, salvo solicitud expresa del usuario.
+- Control previo a entrega: verificar continuidad de numeración, existencia y nombre exacto de cada evidencia, correspondencia entre captura y paso, estructura requerida, estados del capítulo y README, ausencia de secretos y ausencia de notas internas o instrucciones pendientes.
+- Separación capítulo/KBA: en el capítulo describir el comportamiento comprobado, la decisión técnica y el aprendizaje pertinente; en docs/kba-y-hallazgos.md registrar el diagnóstico reutilizable (síntoma, causa comprobada o incertidumbre, solución o mitigación, validación y alcance). Evitar duplicar el análisis completo en ambos documentos; usar referencias cruzadas.
+- Publicación: entregar al usuario los archivos completos y el cambio correspondiente de README para que él revise y publique. No realizar commits sin autorización expresa.
+
 
 ## 14. Escenarios integradores por capítulo
 
