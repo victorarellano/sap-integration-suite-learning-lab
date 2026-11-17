@@ -1,6 +1,6 @@
 # 21 - Integración SFTP y archivos
 
-**Estado del capítulo:** 🟨 En curso - laboratorios 21.1 y 21.2 completados; 21.3 a 21.6 pendientes.
+**Estado del capítulo:** 🟨 En curso — laboratorios 21.1, 21.2, 21.3 y 21.4 completados; 21.5 y 21.6 pendientes.
 **Package:** `CPI Learning Lab`
 **Entorno:** SAP BTP Trial, SAP Cloud Integration, SAP Cloud Connector 2.16.2, Docker Desktop y servidor `atmoz/sftp` en Windows 11.
 
@@ -14,8 +14,8 @@ Implementar integraciones de archivos mediante SFTP en SAP Cloud Integration, ut
 |---|---|---|---|
 | 21.1 | Infraestructura, seguridad y conectividad SFTP | ✅ Completado | Variable por instalación |
 | 21.2 | Escritura de archivos mediante SFTP Receiver | ✅ Completado | 45–60 min |
-| 21.3 | Lectura de archivos mediante SFTP Sender | ⬜ Pendiente | Por definir en diseño |
-| 21.4 | Ciclo de vida de archivos | ⬜ Pendiente | Por definir en diseño |
+| 21.3 | Lectura de archivos mediante SFTP Sender, polling e idempotencia | ✅ Completado | — |
+| 21.4 | Ciclo de vida de archivos: Move File y Delete File | ✅ Completado | — |
 | 21.5 | Transformaciones de archivos | ⬜ Pendiente | Por definir en diseño |
 | 21.6 | Errores, MPL y trazabilidad | ⬜ Pendiente | Por definir en diseño |
 
@@ -23,13 +23,15 @@ Implementar integraciones de archivos mediante SFTP en SAP Cloud Integration, ut
 
 ```mermaid
 flowchart LR
-    P["Postman"] -->|"HTTPS POST / OAuth"| C["Cloud Integration: LAB21_SFTP_Receiver"]
-    C -->|"SFTP Receiver / On-Premise"| SCC["SAP Cloud Connector"]
+    P["Postman"] -->|"HTTPS POST / OAuth"| R["Cloud Integration: LAB21_SFTP_Receiver"]
+    R -->|"SFTP Receiver / On-Premise"| SCC["SAP Cloud Connector"]
     SCC -->|"TCP: host virtual a 127.0.0.1:2222"| S["Docker: atmoz/sftp"]
-    S --> F["/upload/lab21-02-prueba.txt"]
+    S -->|"Polling SFTP Sender / On-Premise"| SCC
+    SCC --> L["Cloud Integration: LAB21_SFTP_Sender"]
+    S --- F["/upload: archivos de prueba y archivo-21-4"]
 ```
 
-La escritura SFTP desde CPI se validó en 21.2. La lectura periódica mediante SFTP Sender queda fuera de los resultados validados hasta ejecutar 21.3.
+En 21.2 se validó la escritura remota; en 21.3 la lectura periódica y la idempotencia; en 21.4 las políticas de archivado y eliminación posterior al procesamiento.
 
 ## Prerrequisitos e instalación
 
@@ -39,7 +41,7 @@ La escritura SFTP desde CPI se validó en 21.2. La lectura periódica mediante S
 - Credencial segura `LAB21_SFTP_BASIC` y SSH Known Hosts desplegado.
 - Postman con autenticación OAuth para invocar endpoints HTTPS del runtime.
 
-La instalación detallada del servidor, las claves de host SSH, la configuración de Cloud Connector y la reproducción en otro PC se documenta en la **[Guía de instalación SFTP y Cloud Connector](21-guia-instalacion-sftp-cloud-connector.md)**. El enlace requiere incorporar dicho archivo en `docs/`.
+La instalación detallada del servidor, las claves de host SSH, la configuración de Cloud Connector y la reproducción en otro PC se documenta en la **[Guía de instalación SFTP y Cloud Connector](21-guia-instalacion-sftp-cloud-connector.md)**.
 
 **Seguridad:** no almacenar contraseñas, claves privadas, service keys, tokens ni contenido sensible de `.env` en Git. Los scripts y el ejemplo de variables pueden versionarse sin secretos.
 
@@ -214,15 +216,215 @@ Laboratorio 21.1 validado; Security Material y Known Hosts desplegados; acceso a
 - `Override` sustituye el contenido anterior; se comprobó sobre un nombre fijo de prueba. No representa una política de conservación de archivos.
 - Los permisos del servidor remoto pueden producir HTTP 500 y MPL Failed aunque el iFlow esté `Started`.
 - El HTTP 200 se complementó con lectura real del archivo; por sí solo no se utilizó como prueba de persistencia.
-- No se validaron aún lectura por polling, tratamiento masivo, nombres dinámicos, archivos temporales ni recuperación automática de errores.
+- No se validaron en 21.2 lectura por polling, tratamiento masivo, nombres dinámicos, archivos temporales ni recuperación automática de errores.
+
+## 21.3 - Lectura periódica mediante SFTP Sender
+
+**Estado:** ✅ Completado
+
+### Objetivo, conceptos y prerrequisitos
+
+Configurar un iFlow iniciado por **SFTP Sender** para leer archivos desde el servidor local a través de Cloud Connector, validar el polling, observar el payload mediante Trace y comprobar que un archivo conservado no se procese repetidamente con la política de idempotencia.
+
+Se reutilizan el servidor, el host virtual, el Security Material `LAB21_SFTP_BASIC` y el SSH Known Hosts verificados en 21.1. No se necesita una petición Postman: el evento de entrada lo origina el adaptador SFTP Sender.
+
+### Arquitectura y configuración
+
+```mermaid
+flowchart LR
+    F["Docker SFTP: /upload/lab21-03-*.txt"] -->|"SFTP Sender / polling"| SCC["SAP Cloud Connector"]
+    SCC --> I["LAB21_SFTP_Sender"]
+    I --> E["End Event"]
+    I -.-> M["Monitor: MPL y Trace"]
+```
+
+1. Crear `LAB21_SFTP_Sender` en el package `CPI Learning Lab`, guardar y registrar la versión inicial `1.0.0`. Conectar el **Start Event** del SFTP Sender directamente con **End Event**, sin receiver adicional. Esta estructura permite aislar la lectura y verificar el mensaje sin añadir transformaciones ni escritura externa.
+2. Configurar **SFTP Sender → Source** con **Directory** `/upload`, **Address** `sftp-learning-lab.internal:2222`, **Proxy Type** `On-Premise`, **Location ID** vacío, **Authentication** `User Name/Password` y **Credential Name** `LAB21_SFTP_BASIC`. Se utiliza la conexión validada en 21.1.
+3. Configurar inicialmente **File Name** `lab21-03-entrada.txt`, con **Regex Filtering** desactivado. Posteriormente ampliar a `lab21-03-*.txt` para procesar otro archivo de la misma serie sin alterar el resto del directorio.
+4. En **Processing**, establecer **Read Lock Strategy** `None`, **Empty File Handling** `Process Empty File`, **Max Messages per Poll** `1`, **Lock Timeout** `15` minutos, **Poll on One Worker Only** desactivado, **Change Directories Stepwise** desactivado, **Include Subdirectories** desactivado y **Use Fast Exists Check** activado. El límite de un mensaje por sondeo facilita correlacionar cada ejecución con su archivo de prueba.
+5. Seleccionar **Post-Processing** `Keep File and Mark as Processed in Idempotent Repository`, con **Idempotent Repository** `Database`. Se conserva el archivo de origen y se utiliza un registro de procesamiento para evitar consumirlo repetidamente.
+6. En **Scheduler**, configurar sondeo **Daily**, cada **5 minutos**, dentro del intervalo **00:00–24:00 GMT**. Guardar y desplegar el iFlow; comprobar `Started`.
+
+**Evidencia 21-11 — SFTP Sender desplegado e iniciado.** El runtime muestra `LAB21_SFTP_Sender` operativo para iniciar lecturas por polling.
+
+![Evidencia 21-11 — SFTP Sender Started](images/tema-21/21-11-sftp-sender-deployed-started.png)
+
+### Prueba de lectura y polling
+
+7. Crear en el directorio local vinculado a `/upload` el archivo `lab21-03-entrada.txt`, con contenido de prueba que incluya `ORD-21005`. Mantener el filtro específico del archivo y esperar el siguiente sondeo.
+8. Revisar **Monitor → Message Processing**. Se observó un MPL `Completed` el **17/11/2026 a las 11:45:05**, con duración de **439 ms**. El archivo original de **133 bytes** fue leído por el adaptador.
+
+**Evidencia 21-12 — Mensaje procesado correctamente.** MPL `Completed` correspondiente a la lectura del archivo de entrada.
+
+![Evidencia 21-12 — MPL Completed](images/tema-21/21-12-sftp-sender-mpl-completed.png)
+
+### Prueba de idempotencia
+
+9. Mantener el archivo original en `/upload` y observar el monitor durante **8 minutos y 50 segundos**, intervalo superior a un ciclo de polling. No se registró un nuevo procesamiento del mismo archivo en el periodo observado. Este resultado valida el comportamiento en la ventana de prueba, sin establecer garantías sobre todas las condiciones de reinicio o retención del repositorio.
+
+**Evidencia 21-13 — Ausencia de reprocesamiento observado.** El monitor permite contrastar la ejecución inicial con la ventana de observación posterior.
+
+![Evidencia 21-13 — Idempotencia observada](images/tema-21/21-13-sftp-sender-idempotencia-sin-reprocesamiento.png)
+
+### Inspección del payload con Trace
+
+10. Conservar la política de idempotencia y ampliar el filtro a `lab21-03-*.txt` (Regex Filtering desactivado). Guardar y desplegar los cambios. Crear el archivo `lab21-03-trace.txt` con la orden `ORD-21006`, de **147 bytes**.
+11. Activar temporalmente **Trace** en Monitor, esperar el polling y revisar el cuerpo del mensaje. El payload recuperado coincidió con el contenido del archivo de prueba. Restablecer el nivel de registro a **Info** al terminar.
+
+**Evidencia 21-14 — Payload de archivo validado mediante Trace.** El cuerpo leído en CPI coincide con el archivo `lab21-03-trace.txt`.
+
+![Evidencia 21-14 — Trace del payload](images/tema-21/21-14-sftp-sender-trace-payload-validado.png)
+
+12. Comprobar en Docker que los archivos de prueba permanecen en el directorio de origen tras su procesamiento, de acuerdo con la política `Keep File`.
+
+**Evidencia 21-15 — Archivo conservado en SFTP.** Verificación del archivo original después de su lectura.
+
+![Evidencia 21-15 — Archivo conservado](images/tema-21/21-15-sftp-sender-archivo-conservado.png)
+
+### Resultado, validación y aprendizajes
+
+| Caso | Resultado observado | Estado |
+|---|---|---|
+| SFTP Sender desplegado | `Started` | ✅ |
+| Lectura por polling | MPL `Completed`, 439 ms | ✅ |
+| Archivo ya procesado | Sin segundo MPL observado en 8 min 50 s | ✅ |
+| Inspección del mensaje | Trace con payload `ORD-21006` coincidente | ✅ |
+| Conservación de archivo | Archivo presente en Docker tras el procesamiento | ✅ |
+
+**Versionado:** la configuración de 21.3 quedó conservada como versión `1.0.2`, con comentario `Laboratorio 21.3 - SFTP Sender validado con polling, idempotencia y Trace`. La versión `1.0.1` se utilizó durante el avance del laboratorio.
+
+**Límites:** no se verificaron procesamiento paralelo, cambios de archivo con igual nombre, comportamiento tras limpiar el repositorio de idempotencia ni reinicios del runtime. La ausencia de reprocesamiento corresponde únicamente a la ventana observada.
+
+## 21.4 - Ciclo de vida de archivos: Move File y Delete File
+
+**Estado:** ✅ Completado
+
+### Objetivo, conceptos y prerrequisitos
+
+Comparar dos políticas de postprocesamiento del **SFTP Sender** sobre archivos descartables: `Move File`, que traslada el archivo a un directorio de archivado, y `Delete File`, que lo elimina después de su procesamiento. Se reutiliza `LAB21_SFTP_Sender` y su conectividad de 21.3; no se necesitan nuevas peticiones Postman.
+
+### Arquitectura
+
+```mermaid
+flowchart LR
+    U["SFTP /upload/lab21-04-*.txt"] --> P["LAB21_SFTP_Sender: polling"]
+    P --> M["MPL Completed"]
+    P --> A["Move File: /upload/archivo-21-4"]
+    P --> D["Delete File: archivo retirado del origen"]
+```
+
+Las dos políticas se validaron **secuencialmente**, cambiando la configuración del mismo adaptador. El diagrama representa alternativas, no operaciones simultáneas sobre un mismo archivo.
+
+### Prueba 1: Move File
+
+1. Partir de la configuración funcional de 21.3 conservada en la versión `1.0.2` y preparar un directorio de archivado dentro del servidor SFTP:
+
+   ```powershell
+   docker exec -u root sap-learning-lab-sftp sh -c "mkdir -p /home/labuser/upload/archivo-21-4 && chown labuser:users /home/labuser/upload/archivo-21-4 && chmod 755 /home/labuser/upload/archivo-21-4"
+   docker exec sap-learning-lab-sftp ls -ld /home/labuser/upload/archivo-21-4
+   ```
+
+   Se verificaron los permisos `drwxr-xr-x` y el propietario `labuser:users`. El directorio debe permitir el archivado por el usuario SFTP.
+2. En **SFTP Sender → Source**, establecer **File Name** `lab21-04-*.txt`, con **Regex Filtering** desactivado. En **Processing**, seleccionar **Post-Processing** `Move File` y **Archive Directory** `archivo-21-4`, relativo al directorio `/upload`. Mantener el polling de 5 minutos y **Include Subdirectories** desactivado. Guardar.
+3. Crear `lab21-04-move.txt` en el directorio local vinculado al SFTP con contenido UTF-8:
+
+   ```text
+   LAB21-SFTP-LIFECYCLE
+   Orden: ORD-21007
+   Origen: /upload
+   Operacion: Move File
+   Destino esperado: /upload/archivo-21-4
+   Prueba: Archivado posterior al procesamiento
+   ```
+
+4. Desplegar `LAB21_SFTP_Sender`, comprobar `Started` y esperar el siguiente sondeo. Se observó un MPL **Completed** el **17/11/2026 a las 12:25:03**, con duración de **460 ms**.
+5. Comprobar en Docker que el archivo ya no existe en `/home/labuser/upload/lab21-04-move.txt` y que aparece en `/home/labuser/upload/archivo-21-4/lab21-04-move.txt` (165 bytes).
+
+   ```powershell
+   docker exec sap-learning-lab-sftp ls -l /home/labuser/upload/lab21-04-move.txt
+   docker exec sap-learning-lab-sftp ls -l /home/labuser/upload/archivo-21-4/
+   ```
+
+   **Evidencia 21-16 — Archivado posterior al procesamiento.** El archivo desapareció del origen y apareció en el directorio de archivado.
+
+   ![Evidencia 21-16 — Move File archivado](images/tema-21/21-16-sftp-move-file-archivado.png)
+
+   **Evidencia 21-17 — MPL de Move File completado.** La ejecución que originó el movimiento terminó en `Completed`.
+
+   ![Evidencia 21-17 — Move File MPL Completed](images/tema-21/21-17-sftp-move-file-mpl-completed.png)
+
+6. Leer el contenido archivado para verificar que la operación conservó el mensaje original:
+
+   ```powershell
+   docker exec sap-learning-lab-sftp cat /home/labuser/upload/archivo-21-4/lab21-04-move.txt
+   ```
+
+   La salida incluyó las líneas originales y la orden `ORD-21007`.
+
+   **Evidencia 21-18 — Contenido conservado después del archivado.** Lectura del archivo archivado con `ORD-21007`.
+
+   ![Evidencia 21-18 — Move File contenido conservado](images/tema-21/21-18-sftp-move-file-contenido-conservado.png)
+
+### Prueba 2: Delete File
+
+7. Registrar la versión `1.0.3` del iFlow con la configuración `Move File` validada y el comentario `Laboratorio 21.4 - Move File validado: archivado y conservacion del contenido`. Esto proporciona un punto de recuperación antes de cambiar a una política destructiva.
+8. En **SFTP Sender → Processing**, cambiar únicamente **Post-Processing** a `Delete File`, conservando **File Name** `lab21-04-*.txt`. Guardar, sin desplegar todavía.
+9. Crear el archivo descartable `lab21-04-delete.txt` con contenido UTF-8:
+
+   ```text
+   LAB21-SFTP-LIFECYCLE
+   Orden: ORD-21008
+   Origen: /upload
+   Operacion: Delete File
+   Prueba: Eliminacion posterior al procesamiento
+   ```
+
+10. Desplegar el iFlow y comprobar `Started`. En **Monitor → Message Processing** se observó un MPL **Completed** el **17/11/2026 a las 12:35:03**, con duración de **442 ms** y resultado `Message processing completed successfully`.
+
+    **Evidencia 21-19 — MPL de Delete File completado.** CPI completó el procesamiento de la prueba de eliminación.
+
+    ![Evidencia 21-19 — Delete File MPL Completed](images/tema-21/21-19-sftp-delete-file-mpl-completed.png)
+
+11. Verificar en Docker la ausencia del archivo de prueba:
+
+    ```powershell
+    docker exec sap-learning-lab-sftp ls -l /home/labuser/upload/lab21-04-delete.txt
+    ```
+
+    La salida fue `No such file or directory`. La comprobación se realizó después del MPL exitoso y sobre el archivo descartable preparado para esta prueba.
+
+    **Evidencia 21-20 — Archivo eliminado del origen.** Docker confirma que `lab21-04-delete.txt` no está presente después del procesamiento.
+
+    ![Evidencia 21-20 — Delete File archivo eliminado](images/tema-21/21-20-sftp-delete-file-eliminado.png)
+
+### Restauración y estado final
+
+12. Recuperar en el diseñador la versión `1.0.2` y verificar **File Name** `lab21-03-*.txt`, **Post-Processing** `Keep File and Mark as Processed in Idempotent Repository` e **Idempotent Repository** `Database`.
+13. Restaurar esa versión, guardar cuando corresponda y desplegar el iFlow. Se confirmó el despliegue de la configuración recuperada, de modo que la política destructiva `Delete File` no queda como configuración final prevista del laboratorio.
+
+### Resultado y validación
+
+| Caso | Resultado observado | Estado |
+|---|---|---|
+| `Move File` | MPL Completed; archivo ausente del origen y presente en `archivo-21-4` | ✅ |
+| Integridad del archivo archivado | Contenido original con `ORD-21007` | ✅ |
+| `Delete File` | MPL Completed; archivo descartable ausente del origen | ✅ |
+| Recuperación | Versión `1.0.2` restaurada y desplegada, según comprobación del operador | ✅ |
+
+### Aprendizajes y límites
+
+- `Move File` permite separar los archivos consumidos de los pendientes sin perder su contenido; la prueba confirmó el movimiento y la integridad del texto.
+- `Delete File` es una operación destructiva. Debe probarse únicamente con archivos descartables y un filtro restringido.
+- Un MPL `Completed` demuestra el éxito del procesamiento registrado, pero la comprobación del efecto sobre el archivo requiere inspeccionar también el servidor SFTP.
+- El archivado se probó con un archivo y un directorio de destino preparado previamente. No se ensayaron fallos de archivado, reintentos, concurrencia ni políticas de retención.
 
 ## Referencias y documentación complementaria
 
 - [SAP Integration Suite - SAP Help Portal](https://help.sap.com/docs/integration-suite)
 - [SAP Cloud Connector - SAP Help Portal](https://help.sap.com/docs/connectivity)
-- [Guía de instalación SFTP y Cloud Connector](21-guia-instalacion-sftp-cloud-connector.md) - documento complementario que debe publicarse en `docs/`.
-- [KBA y hallazgos](kba-y-hallazgos.md) - `KBA-LAB-021-A`, `021-B`, `021-C` y el hallazgo de permisos de 21.2.
+- [Guía de instalación SFTP y Cloud Connector](21-guia-instalacion-sftp-cloud-connector.md)
+- [KBA y hallazgos](kba-y-hallazgos.md) — `KBA-LAB-021-A`, `021-B`, `021-C` y `021-D`.
 
-## Estado y próximos laboratorios
+## Estado del capítulo
 
-**21.1:** ✅ Completado. **21.2:** ✅ Completado. **Capítulo 21:** 🟨 En curso. Los laboratorios 21.3–21.6 requieren diseño y validación propios antes de cambiar su estado.
+**21.1:** ✅ Completado. **21.2:** ✅ Completado. **21.3:** ✅ Completado. **21.4:** ✅ Completado. **21.5:** ⬜ Pendiente. **21.6:** ⬜ Pendiente. **Capítulo 21:** 🟨 En curso.
