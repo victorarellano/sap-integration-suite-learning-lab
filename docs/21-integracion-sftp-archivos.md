@@ -16,8 +16,8 @@ Implementar integraciones de archivos mediante SFTP en SAP Cloud Integration, ut
 | 21.2 | Escritura de archivos mediante SFTP Receiver | ✅ Completado | 45–60 min |
 | 21.3 | Lectura de archivos mediante SFTP Sender, polling e idempotencia | ✅ Completado | - |
 | 21.4 | Ciclo de vida de archivos: Move File y Delete File | ✅ Completado | - |
-| 21.5 | Transformaciones de archivos | ⬜ Pendiente | Por definir en diseño |
-| 21.6 | Errores, MPL y trazabilidad | ⬜ Pendiente | Por definir en diseño |
+| 21.5 | Transformaciones de archivos | ✅ Completado | - |
+| 21.6 | Errores, MPL y trazabilidad | ✅ Completado | - |
 
 ## Arquitectura
 
