@@ -573,4 +573,4 @@ flowchart LR
 
 ## Estado del capítulo
 
-**21.1:** ✅ Completado. **21.2:** ✅ Completado. **21.3:** ✅ Completado. **21.4:** ✅ Completado. **21.5:** ⬜ Pendiente. **21.6:** ⬜ Pendiente. **Capítulo 21:** 🟨 En curso.
+**21.1:** ✅ Completado. **21.2:** ✅ Completado. **21.3:** ✅ Completado. **21.4:** ✅ Completado. **21.5:** ✅ Completado. **21.6:** ⬜ Pendiente. **Capítulo 21:** 🟨 En curso.
