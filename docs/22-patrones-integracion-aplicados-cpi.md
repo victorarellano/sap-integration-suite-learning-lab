@@ -11,7 +11,7 @@ Aplicar patrones de integración a órdenes de negocio, reutilizando Router, Req
 | Laboratorio | Objetivo | Estado |
 |---|---|---|
 | 22.1 Message Filter | Filtrar órdenes según su estado | ✅ Completado |
-| 22.2 Recipient List y Multicast | Distribuir y consolidar respuestas de destinatarios | 🟨 En curso |
+| 22.2 Recipient List y Multicast | Distribuir y consolidar respuestas de destinatarios | ✅ Completado |
 | 22.3 Process Direct | Comunicación entre iFlows | ⬜ Pendiente |
 | 22.4 Canonical Data Model | Modelo común de datos | ⬜ Pendiente |
 | 22.5 Aggregator | Agregación de mensajes | ⬜ Pendiente |
@@ -129,7 +129,7 @@ La condición XPath seleccionó únicamente las órdenes aprobadas. El descarte 
 
 ### Objetivo y conceptos
 
-Distribuir una orden a dos destinatarios y combinar sus respuestas. Sequential Multicast establece una secuencia de ramas; Parallel Multicast permite procesamiento concurrente sin exigir ese orden. Join reúne las ramas y Gather combina sus contenidos. Recipient List condicional seleccionará destinatarios según una regla de negocio.
+Distribuir una orden a dos destinatarios y combinar sus respuestas. Sequential Multicast establece una secuencia de ramas; Parallel Multicast permite procesamiento concurrente sin exigir ese orden. Join reúne las ramas y Gather combina sus contenidos. Recipient List condicional selecciona destinatarios según una regla de negocio.
 
 ### 22.2.1 - Sequential Multicast
 
@@ -148,7 +148,7 @@ Configurar HTTPS Sender con `/lab22/multicast`, User Role `ESBMessaging.send`, C
 | OrderId | XPath | `/Order/OrderId/text()` |
 | RequiresShipping | XPath | `/Order/RequiresShipping/text()` |
 
-La segunda propiedad se reserva para la selección condicional; no interviene en las pruebas actuales.
+La segunda propiedad conserva el indicador de envío, aunque la selección condicional posterior evalúa directamente el XML; no interviene en las pruebas de Multicast.
 
 Agregar `MC_Distribuir_Orden` de tipo Sequential Multicast, con Comercial en posición 1 y Logistica en posición 2.
 
@@ -272,13 +272,229 @@ El orden de respuesta observado no es una garantía contractual para Parallel Mu
 
 Routing Sequence mostró temporalmente nombres duplicados; guardar y reabrir corrigió la visualización. Durante el reemplazo del Multicast en la copia también hubo dificultades de conexión y nombres desactualizados; la reconstrucción de conexiones y reapertura permitieron recuperar el diseño, posteriormente desplegado y probado. La causa interna no fue determinada. Véase [KBA y hallazgos](kba-y-hallazgos.md).
 
-### Alcance pendiente de 22.2
+### 22.2.3 - Recipient List condicional
 
-| Actividad | Estado |
-|---|---|
-| Recipient List condicional | ⬜ Pendiente |
-| Comportamiento ante errores | ⬜ Pendiente |
-| Normalización del XML consolidado | ⬜ Pendiente |
+**Estado:** ✅ Completado
+
+#### Objetivo y diseño
+
+Seleccionar los destinatarios efectivos según el contenido de una orden. Las ramas del Multicast son estáticas: ambas se inician, pero la llamada HTTP de Logística depende de una condición. No se implementa una lista dinámica de endpoints.
+
+1. Copiar `LAB22_Multicast` como `LAB22_Recipient_List`, descripción `22.2 - Recipient List condicional`, versión inicial `1.0.0`. Cambiar el HTTPS Sender a `/lab22/recipient-list` antes del despliegue. Conservar autorización, propiedades, rama Comercial, Sequential Multicast, Join y Gather.
+2. Crear `LIP_Procesar_Logistica` con Router `RT_Requiere_Envio`. Configurar ruta `Envio_Requerido`, Expression Type XML, XPath `/Order/RequiresShipping = 'true'`; ruta `Envio_No_Requerido` como Default. Evaluar el Body original antes de Request Reply.
+3. En la ruta requerida configurar `CM_Destinatario_Logistica` con header Constant `X-Recipient = LOGISTICA`, `RR_Enviar_Logistica` y `CM_Respuesta_Logistica`. Asociar el Receiver HTTP de Logística al Request Reply local con los mismos parámetros de 22.2.1. Conservar el Body original antes de la llamada.
+4. En ambas rutas configurar el header de respuesta `Content-Type` Constant `application/xml`. Para `CM_Respuesta_Logistica` y `CM_Respuesta_Logistica_Omitida`, respectivamente, usar Body Expression:
+
+```xml
+<Result><OrderId>${property.OrderId}</OrderId><Recipient>LOGISTICA</Recipient><Status>ENVIADO</Status></Result>
+```
+
+```xml
+<Result><OrderId>${property.OrderId}</OrderId><Recipient>LOGISTICA</Recipient><Status>OMITIDO</Status></Result>
+```
+
+5. Reemplazar los pasos de Logística del proceso principal por `PC_Procesar_Logistica`, asociado a `LIP_Procesar_Logistica`. Conectar su salida al Join existente; mantener Gather con XML (Same Format) y Combine. El proceso local devuelve un XML compatible con el resultado Comercial, incluso cuando omite la llamada.
+
+```mermaid
+flowchart TD
+ A[HTTPS Sender] --> B[Conservar datos]
+ B --> C[Sequential Multicast]
+ C -->|Comercial| D[Request Reply y respuesta Comercial]
+ C -->|Logistica| E[Process Call]
+ E -. invoca .-> F
+ subgraph LIP[LIP_Procesar_Logistica]
+ F[Start] --> G{Router}
+ G -->|true| H[HTTP Logística y respuesta ENVIADO]
+ G -->|Default| I[Respuesta OMITIDO]
+ H --> J[End]
+ I --> J
+ end
+ D --> K[Join]
+ E --> K
+ K --> L[Gather]
+ L --> M[End]
+```
+
+6. Guardar y desplegar. Diseño sin problemas reportados (`No Data`), Runtime Started, 19/11/2026 18:12:39.
+
+**Evidencia 22-16 - Diseño completo con proceso local y despliegue**
+
+El proceso principal invoca el Router encapsulado en el proceso local.
+
+![Diseño completo con proceso local y despliegue](images/tema-22/22-16-recipient-list-diseno-completo.png)
+
+
+#### Pruebas funcionales
+
+POST `/http/lab22/recipient-list`, OAuth existente, Content-Type `application/xml`. Peticiones independientes en la carpeta del capítulo.
+
+```xml
+<Order><OrderId>ORD-22201</OrderId><Customer>CLIENTE-A</Customer><Amount>150000</Amount><RequiresShipping>true</RequiresShipping></Order>
+```
+
+| Petición (22.2 - Recipient List) | OrderId | RequiresShipping | HTTP | Comercial | Logística |
+|---|---|---|---|---|---|
+| Envio requerido | ORD-22201 | true | 200 | ENVIADO | ENVIADO |
+| Envio no requerido | ORD-22202 | false | 200 | ENVIADO | OMITIDO |
+| Sin indicador de envio | ORD-22203 | Ausente | 200 | ENVIADO | OMITIDO |
+
+Para los casos restantes cambiar OrderId y el indicador según la tabla; en el tercero eliminar el elemento completo. Los tres casos fueron observados en Postman, con la estructura multimap de Gather. La ausencia del campo se trata como omisión por decisión funcional del laboratorio.
+
+**Evidencia 22-17 - Envío requerido**
+
+HTTP 200 y ambos destinatarios ENVIADO.
+
+![Envío requerido](images/tema-22/22-17-recipient-list-postman-envio-requerido.png)
+
+**Evidencia 22-18 - Envío no requerido**
+
+HTTP 200 y Logística OMITIDO.
+
+![Envío no requerido](images/tema-22/22-18-recipient-list-postman-envio-no-requerido.png)
+
+
+#### Validación mediante Trace
+
+Activar Trace y repetir los casos false y true. En false se observaron 15 pasos: HTTP Comercial en segmento 2, Process Call, Router y `CM_Respuesta_Logistica_Omitida` en segmento 3, sin HTTP de Logística en la secuencia visible.
+
+**Evidencia 22-19 - Trace de Logística omitida**
+
+La ruta Default devuelve el resultado sin invocar al receptor de Logística.
+
+![Trace de Logística omitida](images/tema-22/22-19-recipient-list-trace-logistica-omitida.png)
+
+
+En true se observaron 19 pasos. Antes de `CM_Respuesta_Logistica`, la respuesta de HTTPBin confirma POST a `/post`, header `X-Recipient: LOGISTICA` y XML de ORD-22201 con RequiresShipping true. Redactar metadatos de trazabilidad e IP antes de publicar.
+
+**Evidencia 22-20 - Trace de Logística enviada**
+
+Respuesta del servicio HTTP en segmento 3.
+
+![Trace de Logística enviada](images/tema-22/22-20-recipient-list-trace-logistica-enviada.png)
+
+
+Restaurar Info y registrar versión de diseño `1.0.1`. El operador confirmó el cierre. El Router decide la llamada efectiva, no la creación de ramas del Multicast.
+
+### 22.2.4 - Comportamiento ante errores
+
+**Estado:** ✅ Completado
+
+#### Objetivo y procedimiento
+
+Analizar el procesamiento parcial cuando falla el segundo destinatario. Conservar `1.0.1` como punto de recuperación. Modificar temporalmente el Receiver HTTP de Logística a `https://httpbin.org/status/500`, método POST, Throw Exception on Failure activado, timeout 60000 ms. Mantener Comercial sin cambios. Guardar y desplegar sin registrar una versión numerada del escenario defectuoso. Activar Trace.
+
+Duplicar la petición de envío requerido como `22.2 - Recipient List - Error en Logistica`, cambiar OrderId a `ORD-22204`, mantener RequiresShipping true. Resultado observado: HTTP 500 Internal Server Error con MPL ID, sin respuesta XML consolidada.
+
+**Evidencia 22-21 - Error recibido por el emisor**
+
+HTTP 500 para la orden ORD-22204.
+
+![Error recibido por el emisor](images/tema-22/22-21-recipient-list-postman-error-logistica.png)
+
+
+El Trace de 18 pasos muestra `CM_Respuesta_Comercial` ejecutado en segmento 2 y error HTTP en segmento 3, Process Step 15, duración 860 ms. La excepción es `org.apache.camel.component.ahc.AhcOperationFailedException`, statusCode 500, RealDestinationUrl `https://httpbin.org/status/500`.
+
+**Evidencia 22-22 - Detalle de excepción HTTP**
+
+El error se localiza en el Receiver de Logística.
+
+![Detalle de excepción HTTP](images/tema-22/22-22-recipient-list-trace-error-http.png)
+
+**Evidencia 22-23 - Propagación del error**
+
+El modelo muestra el fallo en la rama de Logística y su propagación al proceso principal.
+
+![Propagación del error](images/tema-22/22-23-recipient-list-trace-propagacion-error.png)
+
+
+Manteniendo el destino erróneo, ejecutar `Envio no requerido` (ORD-22202, false). Resultado HTTP 200, Comercial ENVIADO y Logística OMITIDO.
+
+**Evidencia 22-24 - Aislamiento condicional del fallo**
+
+La orden sin envío no resulta afectada por el destino erróneo.
+
+![Aislamiento condicional del fallo](images/tema-22/22-24-recipient-list-postman-aislamiento-error.png)
+
+
+Restaurar Address `https://httpbin.org/post`, POST y Throw Exception on Failure activado; guardar, desplegar y repetir envío requerido. El operador confirmó HTTP 200 con ambos destinatarios ENVIADO, Started e Info restaurado. No registrar otra versión hasta incorporar XSLT.
+
+#### Aprendizajes y alcance
+
+El fallo global no implica que no haya ocurrido un envío previo. La ejecución de la respuesta Comercial antes de la excepción demuestra procesamiento previo de esa rama. Un reintento completo puede duplicar efectos externos; HTTPBin no permite probar persistencia ni rollback de una transacción de negocio. El MPL muestra la excepción, aunque no se conservó una captura separada del estado global Failed. La petición de error queda como caso histórico: reproducirla requiere reconfigurar temporalmente el destino.
+
+### 22.2.5 - Normalización del XML consolidado
+
+**Estado:** ✅ Completado
+
+#### Objetivo y procedimiento
+
+Eliminar la envoltura técnica de Gather y construir un contrato XML de negocio sin namespaces técnicos. Utilizar XSLT Mapping nativo, sin Groovy.
+
+1. En `LAB22_Recipient_List`, insertar `XSL_Normalizar_Resultados` después de `GT_Consolidar_Respuestas` y antes de End.
+2. Crear el recurso `XSL_Normalizar_Resultados.xsl` en UTF-8 sin BOM, sin declaración XML inicial. Contenido definitivo:
+
+```xml
+<xsl:stylesheet version="1.0"
+    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:multimap="http://sap.com/xi/XI/SplitAndMerge"
+    exclude-result-prefixes="multimap">
+    <xsl:output method="xml" encoding="UTF-8" indent="yes"/>
+    <xsl:template match="/">
+        <Results>
+            <xsl:for-each select="/multimap:Messages/multimap:Message1/Result">
+                <Result>
+                    <OrderId><xsl:value-of select="OrderId"/></OrderId>
+                    <Recipient><xsl:value-of select="Recipient"/></Recipient>
+                    <Status><xsl:value-of select="Status"/></Status>
+                </Result>
+            </xsl:for-each>
+        </Results>
+    </xsl:template>
+</xsl:stylesheet>
+```
+
+3. En Processing seleccionar Source `Integration Flow`, Resource mediante **Select → Upload from File System**; asociar `/mapping/XSL_Normalizar_Resultados.xsl`. Output Format `Bytes`.
+
+**Evidencia 22-25 - Configuración de XSLT Mapping**
+
+Recurso asociado y formato Bytes; componente ubicado después de Gather.
+
+![Configuración de XSLT Mapping](images/tema-22/22-25-xslt-mapping-configuracion.png)
+
+
+4. Guardar y desplegar. Ejecutar únicamente la petición `22.2 - Recipient List - Envio requerido` con el XML Order original de ORD-22201. HTTP 200, respuesta observada:
+
+```xml
+<Results>
+    <Result><OrderId>ORD-22201</OrderId><Recipient>COMERCIAL</Recipient><Status>ENVIADO</Status></Result>
+    <Result><OrderId>ORD-22201</OrderId><Recipient>LOGISTICA</Recipient><Status>ENVIADO</Status></Result>
+</Results>
+```
+
+**Evidencia 22-26 - XML normalizado en Postman**
+
+Ambos resultados conservan sus valores, sin envoltura ni declaraciones multimap.
+
+![XML normalizado en Postman](images/tema-22/22-26-xslt-mapping-postman-xml-normalizado.png)
+
+
+5. Registrar versión de diseño `1.0.2`, comentario `22.2 - Recipient List con normalizacion XSLT` y mantener Info. Cierre confirmado por el operador; no se inspeccionó una captura independiente de la versión final del runtime.
+
+#### Problemas y aprendizajes
+
+La carga inicial del XSLT fue rechazada con `The processing instruction target matching "[xX][mM][lL]" is not allowed`. La carga fue exitosa tras retirar la declaración XML y guardar el recurso según el procedimiento anterior. La causa exacta del archivo inicial no se comprobó. El uso de `xsl:copy-of` conservaba declaraciones de namespace del origen; la reconstrucción de elementos con `xsl:value-of` eliminó esas declaraciones. Véase [KBA y hallazgos](kba-y-hallazgos.md).
+
+La transformación recibe la salida de Gather y no modifica el contrato de entrada Order. Se validó un caso representativo de normalización; no se repitieron los tres escenarios de routing ya comprobados. La transformación se limita a la estructura observada y a los campos explícitos del contrato.
+
+### Cierre de 22.2
+
+| Artefacto | Versión de diseño | Endpoint |
+|---|---|---|
+| LAB22_Multicast | 1.0.1 | /http/lab22/multicast |
+| LAB22_Multicast_Parallel | 1.0.1 | /http/lab22/multicast-parallel |
+| LAB22_Recipient_List | 1.0.2 | /http/lab22/recipient-list |
+
+Los cinco ejercicios de 22.2 fueron validados. Los laboratorios 22.3 a 22.6 permanecen pendientes; el capítulo continúa en curso.
 
 ## Referencias
 

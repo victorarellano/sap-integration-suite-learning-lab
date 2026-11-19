@@ -991,3 +991,30 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 - **Validación:** copia desplegada Started y respuesta HTTP 200 con ambos destinatarios. El operador confirmó la revisión del original.
 - **Alcance:** secuencia de recuperación observada, no solución universal ni causa de producto confirmada.
 - **Referencia:** [Capítulo 22](22-patrones-integracion-aplicados-cpi.md), evidencias 22-13 a 22-15.
+
+
+## CPI - Rechazo de recurso XSLT por declaración XML
+
+**Origen:** 22.2.5. **Estado:** resuelto en el escenario observado.
+
+**Síntoma:** Upload of the resource failed; `The processing instruction target matching "[xX][mM][lL]" is not allowed`.
+
+**Diagnóstico:** el parser rechazó una instrucción con destino XML. Una declaración XML fuera del inicio o duplicada es una causa posible; no se inspeccionó el archivo original para confirmarla.
+
+**Corrección:** retirar la declaración XML inicial del recurso, guardar como UTF-8 sin BOM y cargar mediante Processing → Select → Upload from File System.
+
+**Validación:** recurso asociado correctamente (22-25) y transformación ejecutada con HTTP 200 (22-26). No implica que SAP rechace todas las declaraciones XML ni todos los archivos con BOM.
+
+## CPI - Namespaces técnicos conservados al copiar nodos con XSLT
+
+**Origen:** 22.2.5. **Estado:** resuelto y validado.
+
+**Síntoma:** la salida tenía raíz Results, pero OrderId, Recipient y Status conservaban `xmlns:multimap` pese a `exclude-result-prefixes="multimap"`.
+
+**Diagnóstico:** `xsl:copy-of` copia nodos de origen y sus namespaces asociados; exclude-result-prefixes no elimina los namespaces copiados de esos nodos.
+
+**Corrección:** reconstruir los elementos de destino y extraer los textos con `xsl:value-of`, por ejemplo `<OrderId><xsl:value-of select="OrderId"/></OrderId>`.
+
+**Validación:** HTTP 200, raíz Results, dos destinatarios ENVIADO con ORD-22201 y ausencia de declaraciones multimap (22-26). Aplicable al contrato de elementos simples de este laboratorio; no sustituye una copia profunda cuando deben conservarse atributos o estructuras anidadas.
+
+**Referencia:** [Capítulo 22](22-patrones-integracion-aplicados-cpi.md#2225---normalización-del-xml-consolidado).
