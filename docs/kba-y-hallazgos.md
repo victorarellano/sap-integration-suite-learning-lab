@@ -973,3 +973,21 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 **Mitigación:** validar el formato de los datos de entrada antes de depender del resultado del conversor, cuando el escenario requiera manejo explícito de errores. No se implementó esa validación adicional en 21.5. El operador retiró los archivos de prueba del directorio vigilado tras la comprobación.
 
 **Evidencias:** `21-26-sftp-transformacion-csv-invalido-mpl-failed.png`, `21-27-sftp-transformacion-error-csv-to-xml-processor.png`, `21-28-sftp-transformacion-prueba-control-mpl.png`, `21-29-sftp-transformacion-prueba-control-xml.png`.
+
+## CPI - Nombres duplicados en Routing Sequence de Sequential Multicast
+
+- **Síntoma:** ambas filas mostraban `Branch 1`, aunque las conexiones tenían nombres Comercial y Logistica.
+- **Diagnóstico:** discrepancia observable entre propiedades de rama y tabla Routing Sequence. Causa interna no determinada.
+- **Solución validada:** guardar, cerrar y reabrir el iFlow.
+- **Validación:** tabla con Comercial en posición 1 y Logistica en posición 2; prueba posterior HTTP 200 con ambos destinatarios.
+- **Alcance:** comportamiento observado en el editor del laboratorio; no implica defecto general ni impacto demostrado en runtime.
+- **Referencia:** [Capítulo 22, Sequential Multicast](22-patrones-integracion-aplicados-cpi.md#2221--sequential-multicast), evidencia 22-09.
+
+## CPI - Dificultad para reconectar ramas al reemplazar Multicast en una copia
+
+- **Síntoma:** conexiones rechazadas o incompletas y diferencia entre nombre visible de un Content Modifier y sus propiedades. También se observó un indicador Unsaved Changes en el listado del artefacto original.
+- **Diagnóstico:** inconsistencia observable del diseñador durante la sustitución del Multicast. No se determinó si existía una causa común ni si el indicador correspondía a cambios persistidos.
+- **Mitigación aplicada:** reconstruir conexiones en la copia, cerrar y reabrir el editor, verificar el diseño y guardar. Mantener el original versionado y verificarlo por separado.
+- **Validación:** copia desplegada Started y respuesta HTTP 200 con ambos destinatarios. El operador confirmó la revisión del original.
+- **Alcance:** secuencia de recuperación observada, no solución universal ni causa de producto confirmada.
+- **Referencia:** [Capítulo 22](22-patrones-integracion-aplicados-cpi.md), evidencias 22-13 a 22-15.
