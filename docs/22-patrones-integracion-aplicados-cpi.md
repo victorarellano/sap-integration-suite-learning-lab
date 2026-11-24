@@ -1,6 +1,6 @@
 ﻿# 22 - Patrones de integración aplicados en CPI
 
-**Estado:** 🟨 En curso
+**Estado:** ✅ Completado
 
 ## Objetivo y contexto
 
@@ -14,8 +14,8 @@ Aplicar patrones de integración a órdenes de negocio, reutilizando Router, Req
 | 22.2 Recipient List y Multicast | Distribuir y consolidar respuestas de destinatarios | ✅ Completado |
 | 22.3 Process Direct | Comunicación entre iFlows | ✅ Completado |
 | 22.4 Canonical Data Model | Modelo común de datos | ✅ Completado |
-| 22.5 Aggregator | Agregación de mensajes | ⬜ Pendiente |
-| 22.6 Integrador | Combinar patrones | ⬜ Pendiente |
+| 22.5 Aggregator | Agregación de mensajes | ✅ Completado |
+| 22.6 Integrador | Combinar patrones | ✅ Completado |
 
 Estimación inicial del capítulo: 215–300 minutos, no equivalente a tiempo real medido. La estimación inicial de 22.2 fue 40–55 minutos; las dificultades del editor extendieron su ejecución.
 
@@ -494,7 +494,7 @@ La transformación recibe la salida de Gather y no modifica el contrato de entra
 | LAB22_Multicast_Parallel | 1.0.1 | /http/lab22/multicast-parallel |
 | LAB22_Recipient_List | 1.0.2 | /http/lab22/recipient-list |
 
-Los cinco ejercicios de 22.2 fueron validados. El capítulo continúa en curso.
+Los cinco ejercicios de 22.2 fueron validados.
 
 ## 22.3 - ProcessDirect
 
@@ -737,9 +737,188 @@ Las advertencias del editor no impidieron las pruebas con XML válido. No se com
 
 Registrar `1.0.1` mediante Save as Version, descripción `22.4 - Canonical Data Model validado`, desplegar y repetir las tres pruebas. El operador confirmó el cierre de esta secuencia.
 
+## 22.5 - Aggregator
+
+**Estado:** ✅ Completado
+
+### Objetivo y conceptos
+
+Agrupar mensajes independientes por una clave de negocio y emitir un XML consolidado cuando llega la última posición o transcurren dos minutos desde el último mensaje del grupo. A diferencia de Gather, que reúne ramas de una ejecución, este laboratorio reúne mensajes recibidos en solicitudes independientes. Cada OrderId mantiene su propio grupo.
+
+### Configuración y procedimiento
+
+Crear `LAB22_Aggregator` (versión inicial 1.0.0), HTTPS Sender `/lab22/aggregator`, rol ESBMessaging.send, CSRF desactivado. En Integration Process → Processing establecer Transaction Handling `Required for JDBC`, requerido por el Aggregator.
+
+Configurar `AG_Agrupar_Posiciones`:
+
+| Campo | Valor |
+|---|---|
+| Correlation Expression | `/OrderItem/OrderId` |
+| Aggregation Strategy | XML (Same Format) |
+| Algorithm | Combine |
+| Last Message Condition | `/OrderItem/LastItem = 'true'` |
+| Completion Timeout | 2 minutos |
+| Timeout Measured From | Arrival Time of Last Message for Aggregation |
+| Completion Size | Sin valor |
+| Data Store Name | DS_LAB22_AGGREGATOR |
+
+**Evidencia 22-41 - Estrategia de agregación**
+
+![Configuración Aggregator](images/tema-22/22-41-aggregator-estrategia-agregacion.png)
+
+Después del Aggregator, configurar `RT_Motivo_Finalizacion` con rutas Non-XML `${header.CamelAggregatedCompletedBy} = 'predicate'` y `${header.CamelAggregatedCompletedBy} = 'timeout'`; Default hacia Error End. En cada ruta crear una Exchange Property `AggregationEntryId`, tipo Expression, java.lang.String, con `CONDITION-${exchangeId}` o `TIMEOUT-${exchangeId}` respectivamente. En ambos Data Store Write utilizar Entry ID `${property.AggregationEntryId}`, store `DS_LAB22_AGG_RESULTADOS`, visibilidad Global, retention threshold 1 día, expiration 2 días, Encrypt, Overwrite e Include Headers desactivados. Conectar al End. El store de resultados es distinto del utilizado internamente por Aggregator.
+
+Guardar y desplegar.
+
+**Evidencia 22-42 - Diseño completo y despliegue**
+
+![Diseño Aggregator](images/tema-22/22-42-aggregator-iflow-diseno-completo.png)
+
+### Pruebas funcionales
+
+Petición `22.5 - Aggregator`, POST `/http/lab22/aggregator`, OAuth 2.0, application/xml. Enviar cuatro mensajes en el orden indicado, sin superar el timeout entre posiciones del mismo grupo.
+
+```xml
+<OrderItem><OrderId>ORD-22501</OrderId><ItemId>10</ItemId><ProductId>MAT-001</ProductId><Quantity>2</Quantity><LastItem>false</LastItem></OrderItem>
+```
+
+| Envío | OrderId | ItemId | ProductId | Quantity | LastItem |
+|---|---|---|---|---|---|
+| 1 | ORD-22501 | 10 | MAT-001 | 2 | false |
+| 2 | ORD-22502 | 10 | MAT-003 | 5 | false |
+| 3 | ORD-22501 | 20 | MAT-002 | 3 | true |
+| 4 | ORD-22502 | 20 | MAT-004 | 4 | false |
+
+Los cuatro envíos devolvieron HTTP 200. En Monitor → Data Stores, comprobar dos entradas en DS_LAB22_AGG_RESULTADOS, una por condición y otra por timeout. HTTP 200 de recepción no implica que el grupo ya esté completo.
+
+**Evidencia 22-43 - Resultados persistidos**
+
+![Entradas Data Store](images/tema-22/22-43-aggregator-datastore-resultados.png)
+
+**Evidencia 22-44 - Payload por timeout**
+
+ORD-22502 contiene sus dos posiciones, ambas con LastItem false.
+
+![Payload timeout](images/tema-22/22-44-aggregator-payload-timeout.png)
+
+**Evidencia 22-45 - Payload por condición**
+
+ORD-22501 contiene sus dos posiciones, la segunda con LastItem true. Ambos resultados utilizan la envoltura multimap:Messages/multimap:Message1 y conservan los OrderItem originales sin mezclar grupos.
+
+![Payload condición](images/tema-22/22-45-aggregator-payload-condicion.png)
+
+### Monitorización y aprendizajes
+
+Se observaron seis MPL Completed. El grupo timeout mostró Runs a las 13:03:59, 13:04:37 y 13:06:38; desde el último mensaje hasta la finalización transcurrieron 121 segundos, consistente con el timeout configurado. El grupo por condición mostró dos Runs, según confirmación del operador. El tiempo total del grupo incluye espera, no solo ejecución activa.
+
+**Evidencia 22-46 - Monitor MPL**
+
+![Monitor Aggregator](images/tema-22/22-46-aggregator-monitor-mpl.png)
+
+El Entry ID identifica la entrada persistida mediante el Exchange ID y el motivo de cierre; no sustituye una clave de idempotencia de negocio. La configuración directa `${property.CompletionReason}-${exchangeId}` en Data Store Write produjo un error de parser durante el despliegue. La construcción previa en Content Modifier y referencia a una sola propiedad resolvió el problema. Véase [KBA y hallazgos](kba-y-hallazgos.md).
+
+## 22.6 - Escenario integrador
+
+**Estado:** ✅ Completado
+
+### Objetivo y diseño
+
+Combinar normalización, ProcessDirect, filtrado comercial, distribución selectiva, Multicast, Process Call, Join, Gather y XSLT. Reutilizar los mappings de 22.4 y la distribución de 22.2 sin alterar los artefactos originales.
+
+```mermaid
+flowchart LR
+ A[HTTPS] --> B[Request Reply ProcessDirect]
+ B --> C[Normalizador ERP CRM]
+ C --> D{Validar orden}
+ D -->|Aceptada| E[Conservar datos]
+ E --> F[Proceso local distribución]
+ F --> G[Comercial]
+ F --> H{Logística requerida}
+ G --> I[Join Gather XSLT]
+ H --> I
+ D -->|Descartada| J[Result]
+ D -->|Formato desconocido| K[HTTP 400]
+```
+
+### Normalizador
+
+`LAB22_Integrador_Normalizador` reutiliza los recursos y mappings de 22.4. Sustituir HTTPS Sender por ProcessDirect Sender y conservar Router `RT_Identificar_Origen`, rutas ERP, CRM y formato no soportado. El normalizador devuelve CanonicalOrder o Error; el integrador es responsable de la respuesta HTTP pública. Desplegar antes del consumidor. La dirección interna exacta debe coincidir en ambos adaptadores ProcessDirect.
+
+**Evidencia 22-47 - Normalizador desplegado**
+
+### Integrador
+
+Crear `LAB22_Integrador`, HTTPS Sender `/lab22/integrador`. `RR_Normalizar_Orden` invoca al normalizador mediante ProcessDirect. `RT_Validar_Orden` separa órdenes aceptadas, descartadas y formatos no soportados. La ruta de descarte utiliza `CM_Orden_Descartada`: extraer `OrderId` mediante XPath `/CanonicalOrder/Id/text()` a Exchange Property java.lang.String y construir Body Expression:
+
+```xml
+<Result><OrderId>${property.OrderId}</OrderId><Status>DESCARTADO</Status><Reason>Importe inferior al minimo comercial</Reason></Result>
+```
+
+La ruta de formato no soportado conserva el Error y establece HTTP 400. En la ruta aceptada, `CM_Conservar_Datos_Orden` conserva los datos de negocio; `TotalAmount` se extrae mediante XPath `/CanonicalOrder/TotalAmount/text()` como java.lang.Double. `PC_Distribuir_Orden` referencia `LIP_Distribuir_Orden`.
+
+Trasladar la lógica de distribución de 22.2 al proceso local: Multicast con Comercial y Logística, HTTP Request Reply hacia HTTPBin, Join, Gather y `XSL_Normalizar_Resultados.xsl` (Source Integration Flow, Output Format Bytes). `PC_Procesar_Logistica` referencia `LIP_Procesar_Logistica`. En `RT_Requiere_Envio`, configurar `Envio_Requerido` como Non-XML, `${property.TotalAmount} >= '10000'`; la ruta Default devuelve LOGISTICA OMITIDO. La rama requerida invoca HTTP y devuelve LOGISTICA ENVIADO. El XSLT reconstruye Results/Result con OrderId, Recipient y Status, según 22.2.5.
+
+**Evidencia 22-48 - Diseño completo del integrador**
+
+![Diseño integrador](images/tema-22/22-48-integrador-iflow-diseno-completo.png)
+
+### Pruebas funcionales
+
+POST `/http/lab22/integrador`, OAuth 2.0, application/xml. Peticiones independientes en Postman.
+
+```xml
+<Order><OrderId>ORD-22601</OrderId><CustomerId>C100</CustomerId><Amount>500</Amount><Currency>CLP</Currency></Order>
+```
+
+HTTP 200, Result DESCARTADO con OrderId ORD-22601 y motivo Importe inferior al minimo comercial.
+
+**Evidencia 22-49 - Orden descartada**
+
+![Orden descartada](images/tema-22/22-49-integrador-postman-orden-descartada.png)
+
+Para Solo Comercial utilizar el mismo formato Order, OrderId ORD-22602 e importe 1500. HTTP 200, Results con COMERCIAL ENVIADO y LOGISTICA OMITIDO.
+
+**Evidencia 22-50 - Solo Comercial**
+
+![Solo Comercial](images/tema-22/22-50-integrador-postman-solo-comercial.png)
+
+```xml
+<SalesOrder><Number>ORD-22603</Number><Account>C100</Account><Total>15000</Total><CurrencyCode>CLP</CurrencyCode></SalesOrder>
+```
+
+HTTP 200, Results con ambos destinatarios ENVIADO y OrderId ORD-22603.
+
+**Evidencia 22-51 - Comercial y Logística**
+
+![Ambos destinatarios](images/tema-22/22-51-integrador-postman-comercial-logistica.png)
+
+```xml
+<PurchaseOrder><Id>ORD-22604</Id><Amount>15000</Amount></PurchaseOrder>
+```
+
+HTTP 400, Error con Code UNSUPPORTED_FORMAT y Message Formato de origen no soportado.
+
+**Evidencia 22-52 - Formato no soportado**
+
+![Formato no soportado](images/tema-22/22-52-integrador-postman-formato-no-soportado.png)
+
+### Monitorización y resultados
+
+Filtrar Monitor Message Processing por Correlation ID. Ambos artefactos Completed el 24/11/2026 a las 17:34:37, integrador 26 ms y normalizador 7 ms. La captura confirma correlación, no identifica por sí sola la orden.
+
+**Evidencia 22-53 - Correlación entre iFlows**
+
+![Correlación integrador](images/tema-22/22-53-integrador-monitor-correlacion-iflows.png)
+
+### Problemas y aprendizajes
+
+La expresión `${xpath:/CanonicalOrder/Id/text()}` en Body Expression provocó Unknown function durante despliegue. La extracción XPath a propiedad y referencia Camel Simple resolvió el error. El Router de Logística produjo Invalid xpath al interpretar `${exchangeProperty.TotalAmount} >= 10000` como XPath. Se corrigió con Non-XML, literal entre comillas y propiedad numérica; las pruebas 1500 y 15000 validaron ambas rutas. No se probó el valor exacto del umbral. Véase [KBA y hallazgos](kba-y-hallazgos.md).
+
+El modelo canónico permite aplicar las mismas reglas a ERP y CRM. La distribución condicional y la normalización de respuestas se reutilizan como procesos locales. No se incorporó Aggregator a este escenario porque las solicitudes son órdenes completas, no posiciones independientes.
+
 ## Estado del capítulo
 
-Los laboratorios 22.1 a 22.4 están completados. Permanecen pendientes 22.5 Aggregator y 22.6 Integrador.
+Los seis laboratorios están completados. Versionado final de los artefactos, control de Draft y exportación del paquete confirmados por el operador. Las pruebas se realizaron contra el contenido desplegado; no se afirma una comprobación independiente de la versión final del runtime.
 
 ## Referencias
 

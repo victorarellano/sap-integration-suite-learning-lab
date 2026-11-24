@@ -1061,3 +1061,31 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 **Alcance:** no se confirmó la causa raíz del incidente ni una corrección específica aplicada por SAP. No se atribuye el fallo a la configuración del adapter ProcessDirect.
 
 **Aprendizaje:** distinguir los errores de diseño del iFlow de los problemas del ciclo de vida de los artefactos en runtime. Evitar modificaciones innecesarias de integraciones funcionales durante incidentes de plataforma.
+
+
+## Aggregator requiere transacción JDBC
+
+- Síntoma: `The process requires a transaction because aggregator is used`.
+- Diagnóstico: requisito de transacción indicado por el diseñador.
+- Solución: Integration Process → Processing → Transaction Handling → Required for JDBC.
+- Alcance: LAB22_Aggregator; despliegue y agrupación validados.
+
+## Entry ID dinámico en Data Store Write
+
+- Síntoma: SimpleParserException, expected symbol functionEnd but was eol, al utilizar `${property.CompletionReason}-${exchangeId}`.
+- Solución: construir `AggregationEntryId` en Content Modifier mediante Expression y utilizar `${property.AggregationEntryId}` en Entry ID.
+- Alcance: solución validada en 22.5; no demuestra que toda concatenación esté prohibida.
+
+## XPath dentro de Body Expression
+
+- Síntoma: Unknown function: xpath:/CanonicalOrder/Id/text() durante despliegue.
+- Diagnóstico: expresión XPath insertada como función de Camel Simple.
+- Solución: Exchange Property OrderId, Source Type XPath, `/CanonicalOrder/Id/text()`, java.lang.String; Body Expression `${property.OrderId}`.
+- Alcance: LAB22_Integrador, HTTP 200 DESCARTADO validado.
+
+## Router: expresión Non-XML y comparación numérica
+
+- Síntoma: Invalid xpath y posteriormente Invalid format of condition expression value.
+- Diagnóstico: condición Camel Simple evaluada como XPath; el diseñador también rechazó la expresión corregida inicialmente.
+- Solución: Non-XML, `${property.TotalAmount} >= '10000'`, TotalAmount extraído como java.lang.Double.
+- Alcance: 1500 omitió Logística y 15000 la activó. No se aisló el efecto de cada cambio ni se probó el límite exacto.
