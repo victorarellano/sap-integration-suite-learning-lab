@@ -993,17 +993,35 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 - **Referencia:** [Capítulo 22](22-patrones-integracion-aplicados-cpi.md), evidencias 22-13 a 22-15.
 
 
-## CPI - Rechazo de recurso XSLT por declaración XML
+## CPI - Rechazo de recursos XSLT y XSD por declaración XML
 
-**Origen:** 22.2.5. **Estado:** resuelto en el escenario observado.
+**Origen:** laboratorios 22.2.5 y 22.4.
 
-**Síntoma:** Upload of the resource failed; `The processing instruction target matching "[xX][mM][lL]" is not allowed`.
+**Estado:** resuelto y validado en ambos escenarios.
 
-**Diagnóstico:** el parser rechazó una instrucción con destino XML. Una declaración XML fuera del inicio o duplicada es una causa posible; no se inspeccionó el archivo original para confirmarla.
+**Síntomas:**
 
-**Corrección:** retirar la declaración XML inicial del recurso, guardar como UTF-8 sin BOM y cargar mediante Processing → Select → Upload from File System.
+- XSLT: `The processing instruction target matching "[xX][mM][lL]" is not allowed`.
+- XSD: `Illegal processing instruction target ("xml"); xml (case insensitive) is reserved by the specs`, posición `[2,5]`.
 
-**Validación:** recurso asociado correctamente (22-25) y transformación ejecutada con HTTP 200 (22-26). No implica que SAP rechace todas las declaraciones XML ni todos los archivos con BOM.
+**Diagnóstico:** el parser rechazó una instrucción con destino XML. Una declaración XML fuera del inicio del documento o duplicada puede provocar este error. No se inspeccionaron los archivos originales para determinar la causa exacta.
+
+**Corrección:**
+
+- Retirar la declaración `<?xml version="1.0" encoding="UTF-8"?>`.
+- Guardar los recursos en UTF-8.
+- Para XSLT, cargar mediante Processing → Select → Upload from File System.
+- Para XSD, incorporar los esquemas mediante References → Local.
+
+**Validación:**
+
+- XSLT: recurso asociado y transformación ejecutada con HTTP 200 (evidencias 22-25 y 22-26).
+- XSD: tres esquemas incorporados correctamente (evidencia 22-34) y utilizados en los Message Mapping ERP y CRM, con resultados HTTP 200 (evidencias 22-35, 22-36, 22-38 y 22-39).
+
+**Alcance:** la declaración XML es opcional. La solución comprobada no implica que SAP rechace todas las declaraciones XML ni todos los archivos con BOM.
+
+**Referencia:** [W3C - XML 1.0](https://www.w3.org/TR/xml/#sec-prolog-dtd).
+
 
 ## CPI - Namespaces técnicos conservados al copiar nodos con XSLT
 
@@ -1018,3 +1036,28 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 **Validación:** HTTP 200, raíz Results, dos destinatarios ENVIADO con ORD-22201 y ausencia de declaraciones multimap (22-26). Aplicable al contrato de elementos simples de este laboratorio; no sustituye una copia profunda cuando deben conservarse atributos o estructuras anidadas.
 
 **Referencia:** [Capítulo 22](22-patrones-integracion-aplicados-cpi.md#2225---normalización-del-xml-consolidado).
+
+
+## CPI - Error interno durante el despliegue de artefactos
+
+**Origen:** incidente de plataforma durante el laboratorio 22.3.
+
+**Estado:** resuelto operativamente. Causa raíz no confirmada.
+
+**Síntomas:**
+
+- Error al actualizar la configuración durante el despliegue.
+- Runtime Status Error.
+- Mensaje `[CONTENT][CONTENT_DEPLOY][ErrorPersistingArtifact]`.
+- Artefactos que permanecían en estado Stopping durante varias horas después de solicitar Undeploy.
+- Built-In Support devolvía `Tenant not found`.
+
+**Diagnóstico:** se revisaron las suscripciones, instancias de servicio, asignaciones de servicios y roles del usuario. No se identificó una configuración incorrecta que explicara los síntomas. Algunos artefactos previamente desplegados continuaban operativos.
+
+**Resolución:** el ambiente recuperó su funcionamiento. El 23/11/2026 se verificó el despliegue correcto de LAB22_PD_Provider con Runtime Status Started.
+
+**Validación posterior:** el 24/11/2026 se comprobó la comunicación entre LAB22_PD_Consumer y LAB22_PD_Provider, con HTTP 200 y ambos MPL en estado Completed.
+
+**Alcance:** no se confirmó la causa raíz del incidente ni una corrección específica aplicada por SAP. No se atribuye el fallo a la configuración del adapter ProcessDirect.
+
+**Aprendizaje:** distinguir los errores de diseño del iFlow de los problemas del ciclo de vida de los artefactos en runtime. Evitar modificaciones innecesarias de integraciones funcionales durante incidentes de plataforma.

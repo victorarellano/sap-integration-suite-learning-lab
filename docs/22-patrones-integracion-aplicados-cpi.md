@@ -12,8 +12,8 @@ Aplicar patrones de integración a órdenes de negocio, reutilizando Router, Req
 |---|---|---|
 | 22.1 Message Filter | Filtrar órdenes según su estado | ✅ Completado |
 | 22.2 Recipient List y Multicast | Distribuir y consolidar respuestas de destinatarios | ✅ Completado |
-| 22.3 Process Direct | Comunicación entre iFlows | ⬜ Pendiente |
-| 22.4 Canonical Data Model | Modelo común de datos | ⬜ Pendiente |
+| 22.3 Process Direct | Comunicación entre iFlows | ✅ Completado |
+| 22.4 Canonical Data Model | Modelo común de datos | ✅ Completado |
 | 22.5 Aggregator | Agregación de mensajes | ⬜ Pendiente |
 | 22.6 Integrador | Combinar patrones | ⬜ Pendiente |
 
@@ -125,7 +125,7 @@ La condición XPath seleccionó únicamente las órdenes aprobadas. El descarte 
 
 ## 22.2 - Recipient List y Multicast
 
-**Estado:** 🟨 En curso
+**Estado:** ✅ Completado
 
 ### Objetivo y conceptos
 
@@ -494,7 +494,252 @@ La transformación recibe la salida de Gather y no modifica el contrato de entra
 | LAB22_Multicast_Parallel | 1.0.1 | /http/lab22/multicast-parallel |
 | LAB22_Recipient_List | 1.0.2 | /http/lab22/recipient-list |
 
-Los cinco ejercicios de 22.2 fueron validados. Los laboratorios 22.3 a 22.6 permanecen pendientes; el capítulo continúa en curso.
+Los cinco ejercicios de 22.2 fueron validados. El capítulo continúa en curso.
+
+## 22.3 - ProcessDirect
+
+**Estado:** ✅ Completado
+
+### Objetivo y conceptos
+
+Comunicar dos iFlows del mismo tenant de forma síncrona mediante ProcessDirect, separando la interfaz HTTPS de la lógica reutilizable del proveedor. Request Reply espera la respuesta del proveedor; ProcessDirect no requiere publicar un endpoint HTTP adicional.
+
+```mermaid
+flowchart LR
+ A[Postman] --> B[HTTPS Consumer]
+ B --> C[Preparar solicitud]
+ C --> D[Request Reply]
+ D -->|ProcessDirect| E[Provider]
+ E --> F[Procesar orden]
+ F -. respuesta .-> D
+ D --> G[End]
+```
+
+### Configuración del proveedor
+
+Crear `LAB22_PD_Provider` en el package CPI Learning Lab, versión inicial `1.0.0`.
+
+**Evidencia 22-27 - Versión inicial del proveedor**
+
+![Versión inicial del proveedor](images/tema-22/22-27-processdirect-provider-version-inicial.png)
+
+Configurar ProcessDirect Sender con Address `/lab22-pd-provider`. En Runtime Configuration establecer Allowed Header(s) `X-Source`, para admitir el header utilizado en el contrato entre los iFlows.
+
+Agregar `CM_Procesar_Orden` entre Start y End:
+
+| Sección | Nombre | Tipo | Valor |
+|---|---|---|---|
+| Message Header | Content-Type | Constant | application/xml |
+| Exchange Property | OrderId | XPath | `/Order/OrderId/text()` |
+
+La propiedad utiliza `java.lang.String`. Configurar Body Expression:
+
+```xml
+<Result><OrderId>${property.OrderId}</OrderId><Status>PROCESADO</Status><ProcessedBy>LAB22_PD_Provider</ProcessedBy><Source>${header.X-Source}</Source></Result>
+```
+
+Guardar y desplegar. El proveedor debe estar Started antes de invocarlo.
+
+**Evidencia 22-29 - Proveedor desplegado correctamente**
+
+Runtime Started y configuración del header permitido.
+
+![Proveedor desplegado](images/tema-22/22-29-processdirect-provider-despliegue-correcto.png)
+
+### Configuración del consumidor
+
+Crear `LAB22_PD_Consumer` con HTTPS Sender, Address `/lab22/processdirect`, autenticación OAuth 2.0 en Postman. Agregar `CM_Preparar_Solicitud` para establecer el header `X-Source` con valor constante `LAB22_PD_Consumer`, conservando el XML de entrada. Agregar `RR_Invocar_Proveedor` y conectar un Receiver mediante ProcessDirect, Address `/lab22-pd-provider`. Conectar Request Reply al End.
+
+La dirección ProcessDirect debe coincidir con la del proveedor; no es la URL pública utilizada por Postman.
+
+**Evidencia 22-30 - Configuración del consumidor**
+
+Request Reply y dirección interna del proveedor.
+
+![Configuración del consumidor](images/tema-22/22-30-processdirect-consumer-configuracion.png)
+
+Guardar y desplegar el consumidor.
+
+### Prueba funcional
+
+Petición `22.3 - ProcessDirect`, POST `/http/lab22/processdirect`, OAuth 2.0, Content-Type `application/xml`.
+
+```xml
+<Order><OrderId>ORD-22301</OrderId><Amount>1500</Amount></Order>
+```
+
+Resultado validado HTTP 200:
+
+```xml
+<Result><OrderId>ORD-22301</OrderId><Status>PROCESADO</Status><ProcessedBy>LAB22_PD_Provider</ProcessedBy><Source>LAB22_PD_Consumer</Source></Result>
+```
+
+**Evidencia 22-31 - Respuesta correcta en Postman**
+
+![Respuesta ProcessDirect](images/tema-22/22-31-processdirect-postman-respuesta-correcta.png)
+
+### Monitorización y trazabilidad
+
+En Monitor Message Processing se observaron ambos artefactos Completed el 24/11/2026 a las 09:10:17, con tiempos de 16 ms para Consumer y 6 ms para Provider. Son tiempos observados, no una medición comparativa de rendimiento.
+
+**Evidencia 22-32 - Ejecución de ambos iFlows**
+
+![Ejecución de ambos iFlows](images/tema-22/22-32-processdirect-monitor-ejecucion-ambos-iflows.png)
+
+Filtrar por Correlation ID para identificar los dos MPL asociados a la misma ejecución.
+
+**Evidencia 22-33 - Correlación entre consumidor y proveedor**
+
+![Correlation ID](images/tema-22/22-33-processdirect-consumer-correlation-id.png)
+
+### Resultados y aprendizajes
+
+Se verificó la invocación síncrona, el retorno del XML generado por el proveedor, la transferencia de X-Source y la correlación de ambos MPL. La prueba final POST después del despliegue conservó HTTP 200 y el mismo resultado. No se probaron llamadas entre tenants ni propagación de excepciones del proveedor. La incidencia de plataforma se registra separadamente en [KBA y hallazgos](kba-y-hallazgos.md).
+
+## 22.4 - Canonical Data Model
+
+**Estado:** ✅ Completado
+
+### Objetivo y conceptos
+
+Normalizar dos formatos de órdenes hacia un contrato común. Cada origen requiere su propia transformación al modelo canónico; los consumidores posteriores pueden depender del contrato común en lugar de cada formato de origen. El laboratorio valida las transformaciones de entrada, no mappings de salida hacia sistemas adicionales.
+
+```mermaid
+flowchart LR
+ A[HTTPS Sender] --> B{Router}
+ B -->|Order| C[Mapping ERP]
+ B -->|SalesOrder| D[Mapping CRM]
+ C --> E[CanonicalOrder]
+ D --> E
+ B -->|Default| F[Error HTTP 400]
+```
+
+### Configuración y procedimiento
+
+1. Crear `LAB22_Canonical_Data_Model`, versión inicial `1.0.0`. Configurar HTTPS Sender Address `/lab22/canonical-data-model`.
+2. Incorporar `ERP_Order.xsd`, `CRM_SalesOrder.xsd` y `CanonicalOrder.xsd` mediante References → Local. Los esquemas definen las estructuras utilizadas por los mappings; su carga no activa validación integral de mensajes.
+
+**Evidencia 22-34 - Recursos XSD**
+
+![Tres esquemas locales](images/tema-22/22-34-canonical-data-model-recursos-xsd.png)
+
+3. Agregar `RT_Identificar_Origen` con las siguientes rutas:
+
+| Ruta | Expression Type | Condición |
+|---|---|---|
+| ERP | XML | `/Order` |
+| CRM | XML | `/SalesOrder` |
+| Formato_No_Soportado | Default | Sin condición |
+
+El Router reconoce la estructura, no la identidad autenticada del sistema emisor.
+
+4. En ERP agregar `MM_ERP_to_CanonicalOrder`. Crear el recurso local de mapping mediante la acción Create del componente; seleccionar Add source message y Add target message en el editor. Source `ERP_Order.xsd`, Target `CanonicalOrder.xsd`. Conectar los campos directamente:
+
+| Order | CanonicalOrder |
+|---|---|
+| OrderId | Id |
+| CustomerId | CustomerId |
+| Amount | TotalAmount |
+| Currency | Currency |
+
+**Evidencia 22-35 - Mapping ERP**
+
+![Mapping ERP](images/tema-22/22-35-canonical-data-model-mapping-erp.png)
+
+5. En CRM agregar `MM_CRM_to_CanonicalOrder` y crear su recurso local. Source `CRM_SalesOrder.xsd`, Target `CanonicalOrder.xsd` (el mismo contrato de destino).
+
+| SalesOrder | CanonicalOrder |
+|---|---|
+| Number | Id |
+| Account | CustomerId |
+| Total | TotalAmount |
+| CurrencyCode | Currency |
+
+**Evidencia 22-36 - Mapping CRM**
+
+![Mapping CRM](images/tema-22/22-36-canonical-data-model-mapping-crm.png)
+
+6. En la ruta Default agregar `CM_Formato_No_Soportado`, headers Constant `CamelHttpResponseCode = 400` y `Content-Type = application/xml`. Body Constant:
+
+```xml
+<Error><Code>UNSUPPORTED_FORMAT</Code><Message>Formato de origen no soportado</Message></Error>
+```
+
+7. Conectar las tres rutas al End. Guardar y revisar Problems.
+
+**Evidencia 22-37 - Diseño completo**
+
+![Diseño completo](images/tema-22/22-37-canonical-data-model-diseno-completo.png)
+
+Se observaron dos advertencias de compatibilidad de formato entre HTTPS Sender y Message Mapping. No se modificó el diseño para eliminarlas. Desplegar y comprobar Started.
+
+### Pruebas funcionales
+
+Las tres peticiones utilizan POST `/http/lab22/canonical-data-model`, OAuth 2.0 y Content-Type `application/xml`.
+
+#### ERP
+
+Petición `22.4 - Canonical Data Model ERP`:
+
+```xml
+<Order><OrderId>ORD-22401</OrderId><CustomerId>C100</CustomerId><Amount>1500</Amount><Currency>CLP</Currency></Order>
+```
+
+HTTP 200, respuesta (presentada con formato para lectura):
+
+```xml
+<CanonicalOrder><Id>ORD-22401</Id><CustomerId>C100</CustomerId><TotalAmount>1500</TotalAmount><Currency>CLP</Currency></CanonicalOrder>
+```
+
+**Evidencia 22-38 - Postman ERP**
+
+![Postman ERP](images/tema-22/22-38-canonical-data-model-postman-erp.png)
+
+#### CRM
+
+Petición `22.4 - Canonical Data Model CRM`:
+
+```xml
+<SalesOrder><Number>ORD-22401</Number><Account>C100</Account><Total>1500</Total><CurrencyCode>CLP</CurrencyCode></SalesOrder>
+```
+
+HTTP 200 y los mismos cuatro valores y estructura canónica que ERP.
+
+**Evidencia 22-39 - Postman CRM**
+
+![Postman CRM](images/tema-22/22-39-canonical-data-model-postman-crm.png)
+
+#### Formato no soportado
+
+Petición `22.4 - Canonical Data Model Formato No Soportado`:
+
+```xml
+<PurchaseOrder><Id>ORD-22401</Id><Amount>1500</Amount></PurchaseOrder>
+```
+
+HTTP 400 Bad Request y XML Error con Code UNSUPPORTED_FORMAT y Message Formato de origen no soportado.
+
+**Evidencia 22-40 - Rechazo controlado**
+
+![Formato no soportado](images/tema-22/22-40-canonical-data-model-postman-formato-no-soportado.png)
+
+### Resultados, problemas y aprendizajes
+
+| Caso | HTTP esperado | HTTP observado | Resultado |
+|---|---|---|---|
+| ERP | 200 | 200 | CanonicalOrder |
+| CRM | 200 | 200 | CanonicalOrder |
+| Formato desconocido | 400 | 400 | UNSUPPORTED_FORMAT |
+
+La carga inicial de los tres XSD fue rechazada con `Illegal processing instruction target ("xml")`, posición `[2,5]`. Retirar la declaración XML y volver a cargar permitió incorporar los esquemas. La causa exacta de los archivos iniciales no se inspeccionó. Véase [KBA y hallazgos](kba-y-hallazgos.md).
+
+Las advertencias del editor no impidieron las pruebas con XML válido. No se comprobó XML mal formado ni validación integral contra los XSD. La identificación del emisor real requiere mecanismos adicionales; la raíz XML solo identifica el formato.
+
+Registrar `1.0.1` mediante Save as Version, descripción `22.4 - Canonical Data Model validado`, desplegar y repetir las tres pruebas. El operador confirmó el cierre de esta secuencia.
+
+## Estado del capítulo
+
+Los laboratorios 22.1 a 22.4 están completados. Permanecen pendientes 22.5 Aggregator y 22.6 Integrador.
 
 ## Referencias
 
