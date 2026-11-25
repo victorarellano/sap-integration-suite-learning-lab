@@ -8,75 +8,42 @@ laboratorio.
 ## KBA-LAB-001 --- Acceso `/unauthorized` después de suscribirse a Integration Suite
 
 **Estado:** Resuelto.
-
-**Síntoma:** Integration Suite estaba suscrito, pero el acceso inicial
-terminaba en una pantalla de autorización insuficiente.
-
-**Diagnóstico aplicado:** se revisaron y asignaron las Role Collections
-necesarias al usuario. Posteriormente se realizó una autenticación
-nueva.
-
+**Síntoma:** Integration Suite estaba suscrito, pero el acceso inicial terminaba en una pantalla de autorización insuficiente.
+**Diagnóstico aplicado:** se revisaron y asignaron las Role Collections necesarias al usuario. Posteriormente se realizó una autenticación nueva.
 **Resultado:** el usuario pudo acceder a Integration Suite.
-
-**Aprendizaje:** una suscripción activa no implica por sí sola que el
-usuario tenga las autorizaciones necesarias.
+**Aprendizaje:** una suscripción activa no implica por sí sola que el usuario tenga las autorizaciones necesarias.
 
 ------------------------------------------------------------------------
 
 ## KBA-LAB-002 --- Booster no utilizado durante la habilitación
 
 **Estado:** Resuelto mediante configuración manual.
-
-**Síntoma:** el flujo de habilitación basado en Booster no coincidía con
-el entorno del laboratorio.
-
-**Acción:** se habilitaron manualmente la suscripción, roles,
-capabilities y servicios necesarios.
-
-**Resultado:** Integration Suite y Cloud Integration quedaron operativos
-en US East (VA), AWS.
-
-**Aprendizaje:** no asumir que una limitación observada en un asistente
-o tutorial implica que la región completa no soporte el servicio.
-Verificar disponibilidad y resultado real del entorno.
+**Síntoma:** el flujo de habilitación basado en Booster no coincidía con el entorno del laboratorio.
+**Acción:** se habilitaron manualmente la suscripción, roles, capabilities y servicios necesarios.
+**Resultado:** Integration Suite y Cloud Integration quedaron operativos en US East (VA), AWS.
+**Aprendizaje:** no asumir que una limitación observada en un asistente o tutorial implica que la región completa no soporte el servicio. Verificar disponibilidad y resultado real del entorno.
 
 ------------------------------------------------------------------------
 
 ## KBA-LAB-003 --- `ErrorPersistingArtifact` al desplegar iFlows
 
-**Estado:** No reproducido de forma estable / comportamiento transitorio
-observado.
-
+**Estado:** No reproducido de forma estable / comportamiento transitorio observado.
 **Mensaje observado:**
-
 ``` text
 [CONTENT][CONTENT_DEPLOY][ErrorPersistingArtifact]:
 The artifact can't be deployed due to an internal issue.
 Try again after some time.
 ```
-
-**Pruebas realizadas:** se intentó desplegar un segundo iFlow mínimo.
-Inicialmente presentó el mismo error. Audit Log confirmó que las
-operaciones de deployment llegaban al backend. Posteriormente el iFlow
-pudo pasar a `Started`.
-
-**Conclusión del laboratorio:** no se confirmó un defecto del diseño ni
-una incompatibilidad regional. El comportamiento desapareció
-posteriormente.
-
-**Aprendizaje:** cuando un error de plataforma no entrega causa
-suficiente, aislar con un artefacto mínimo y evitar atribuir una causa
-sin evidencia.
+**Pruebas realizadas:** se intentó desplegar un segundo iFlow mínimo. Inicialmente presentó el mismo error. Audit Log confirmó que las operaciones de deployment llegaban al backend. Posteriormente el iFlow pudo pasar a `Started`.
+**Conclusión del laboratorio:** no se confirmó un defecto del diseño ni una incompatibilidad regional. El comportamiento desapareció posteriormente.
+**Aprendizaje:** cuando un error de plataforma no entrega causa suficiente, aislar con un artefacto mínimo y evitar atribuir una causa sin evidencia.
 
 ------------------------------------------------------------------------
 
 ## KBA-LAB-004 --- `401 Unauthorized` invocando el endpoint del iFlow
 
 **Estado:** Resuelto.
-
-**Síntoma:** el token OAuth se obtenía correctamente, pero el endpoint
-devolvía `401 Unauthorized`.
-
+**Síntoma:** el token OAuth se obtenía correctamente, pero el endpoint devolvía `401 Unauthorized`.
 **Validaciones realizadas:**
 
 -   El token contenía autorización `ESBMessaging.send`.
@@ -86,31 +53,20 @@ devolvía `401 Unauthorized`.
 -   El endpoint correspondía al publicado por el runtime.
 
 **Solución:** obtener un access token nuevo y utilizarlo en la petición.
-
-**Causa práctica observada:** se estaba utilizando un token anterior/no
-vigente.
-
-**Aprendizaje:** ante un `401`, comprobar vigencia del token antes de
-modificar scopes, roles o configuración del iFlow.
+**Causa práctica observada:** se estaba utilizando un token anterior/no vigente.
+**Aprendizaje:** ante un `401`, comprobar vigencia del token antes de modificar scopes, roles o configuración del iFlow.
 
 ------------------------------------------------------------------------
 
 ## KBA-LAB-005 --- Exposición accidental de credenciales
 
 **Estado:** Resuelto.
+**Síntoma:** un `client_secret` quedó visible durante la configuración del laboratorio.
+**Acción:** la credencial fue tratada como comprometida y se rotó la Service Key.
+**Prevención:** no capturar ni subir a Git pantallas que contengan secrets, tokens o service keys completas.
+**Aprendizaje:** `client_id` identifica al cliente; `client_secret` autentica al cliente y debe tratarse como secreto. Los access tokens también deben ocultarse aunque sean temporales.
 
-**Síntoma:** un `client_secret` quedó visible durante la configuración
-del laboratorio.
-
-**Acción:** la credencial fue tratada como comprometida y se rotó la
-Service Key.
-
-**Prevención:** no capturar ni subir a Git pantallas que contengan
-secrets, tokens o service keys completas.
-
-**Aprendizaje:** `client_id` identifica al cliente; `client_secret`
-autentica al cliente y debe tratarse como secreto. Los access tokens
-también deben ocultarse aunque sean temporales.
+------------------------------------------------------------------------
 
 ## KBA-LAB-006 - Diferencia entre Service Instance y runtime de Cloud Integration
 
@@ -119,9 +75,7 @@ también deben ocultarse aunque sean temporales.
 **Entorno:** SAP BTP Trial, AWS US East (VA), Cloud Foundry, SAP Integration Suite
 
 ### 1. Síntomas y observaciones
-
 Durante el laboratorio se identificaron las siguientes condiciones:
-
 - El space `dev` mostraba **0 aplicaciones iniciadas**.
 - Cloud Integration mostraba **1 artefacto iniciado**.
 - Existía una instancia llamada `cpi-trial-integration-flow`.
@@ -130,7 +84,6 @@ Durante el laboratorio se identificaron las siguientes condiciones:
 - La operación de creación de la instancia figuraba como `Creation Succeeded`.
 
 Estas observaciones generaron una duda sobre la ubicación del motor que ejecuta los iFlows.
-
 ### 2. Diagnóstico
 
 No se identificó un error de ejecución ni una contradicción entre Cloud Foundry y Cloud Integration.
@@ -146,19 +99,16 @@ Los contadores corresponden a recursos diferentes:
 El nombre `SAP Process Integration Runtime` puede inducir a pensar que su instancia constituye el propio motor de ejecución de los iFlows dentro del space `dev`. Esta interpretación es incorrecta.
 
 ### 3. Explicación técnica
-
 Cloud Integration proporciona un runtime gestionado por SAP.
 La instancia del servicio `SAP Process Integration Runtime`, creada en Cloud Foundry, es un recurso técnico asociado al consumo del servicio.
 
 Por tanto:
-
 - La Service Instance no equivale al proceso que ejecuta físicamente los iFlows.
 - Una Service Key no ejecuta integraciones; proporciona información técnica de acceso.
 - Un iFlow iniciado en Cloud Integration no tiene que aparecer como aplicación iniciada en el space `dev`.
 - La suscripción a Integration Suite y la instancia de SAP Process Integration Runtime son recursos distintos.
 
 ### 4. Solución y validación
-
 No fue necesario modificar la configuración.
 Se realizaron las siguientes comprobaciones:
 
@@ -172,12 +122,10 @@ Se realizaron las siguientes comprobaciones:
 **Resultado:** se validó que los contadores de aplicaciones Cloud Foundry y artefactos Cloud Integration representan recursos distintos.
 
 ### 5. Consideraciones de seguridad
-
 La existencia de una Service Key no demuestra que sus credenciales hayan sido utilizadas correctamente en una llamada OAuth.
 Para verificar esa relación sería necesario revisar la configuración de autenticación y las evidencias del laboratorio 03.
 
 No se deben publicar:
-
 - `client_secret`
 - Access tokens
 - Contraseñas
@@ -187,15 +135,12 @@ No se deben publicar:
 Si alguna credencial real queda expuesta, debe rotarse.
 
 ### 6. Alcance y limitaciones
-
 Este hallazgo aplica a la interpretación de recursos de Cloud Foundry y Cloud Integration en el entorno estudiado.
 Las capturas permiten confirmar la existencia y el estado visible de los recursos, pero no permiten determinar la topología física interna del runtime gestionado por SAP.
 No se identificó una falla atribuible a SAP, a Cloud Foundry ni a la región utilizada.
 
 ### 7. Aprendizaje reutilizable
-
 **Una Service Instance de SAP Process Integration Runtime aprovisionada en Cloud Foundry no significa que el motor de ejecución de los iFlows esté desplegado dentro del mismo space.**
-
 La instancia representa un recurso del servicio, mientras que Cloud Integration proporciona el runtime gestionado por SAP donde se ejecutan los iFlows.
 
 ### Referencias
@@ -205,45 +150,34 @@ La instancia representa un recurso del servicio, mientras que Cloud Integration 
 
 **Relacionado con:** Tema 00 - Arquitectura de SAP BTP y entorno Cloud Foundry; Tema 03 - Primer iFlow HTTP + OAuth Client Credentials.
 
+------------------------------------------------------------------------
 
 ## KBA - `Premature end of file` al ejecutar Message Mapping por HTTPS
 
 **Contexto:** Laboratorio 07.2, iFlow `Empleado Mapping HTTP`, mapping `MM_Empleado_Trabajador`.
-
 **Síntoma:** POST desde Postman con `500 Internal Server Error`. En Monitor Message Processing, fallo en `Map Empleado to Trabajador` y mensaje `Premature end of file`.
-
 **Diagnóstico:** se revisó el contenido de la solicitud y se detectó que no se había incluido el Body XML requerido. El error es compatible con entrada vacía o incompleta; no demuestra por sí solo un problema del XSD.
-
 **Solución verificada:** configurar Postman con Body → raw → XML, enviar un documento `Empleado` válido y utilizar `Content-Type: application/xml`. La nueva respuesta contenía `Trabajador/Codigo=1001` y `Trabajador/NombreCompleto=Victor Arellano`.
-
 **Alcance:** confirmado para esta ejecución del laboratorio. No generalizar como causa única de cualquier error `Premature end of file`.
-
 **Evidencias:** `docs/images/tema-07/07-2-postman-error-http-500.png` y `docs/images/tema-07/07-2-postman-transformacion-correcta.png`.
 
+------------------------------------------------------------------------
 
 ## KBA-LAB-007 - `java.lang.String.call()` en Groovy MarkupBuilder
 
 **Origen:** Laboratorio 08.2 - Content Enricher y Request-Reply.
 **Estado:** Resuelto y validado con Postman.
-
 **Síntoma:** el iFlow `Request Reply` se encontraba desplegado, pero el procesamiento del mensaje falló. En Monitor Message Processing se observó:
-
 ```text
 No signature of method: java.lang.String.call() is applicable for argument types: (java.lang.String) values: [SOL-1001]
 ```
-
-**Diagnóstico:** en `GRV_Enriquecer_Solicitud.groovy`, las variables locales `solicitudId`, `clienteId` y `origen` compartían nombres con los nodos que se pretendía crear mediante `MarkupBuilder`, por ejemplo `solicitudId(solicitudId)`. La coincidencia producía la invocación errónea de un `String` como función.
-
+**Diagnóstico:** en `GRV_Enriquecer_Solicitud.groovy`, las variables locales `solicitudId`, `clienteId` y `origen` compartían nombres con los nodos que se pretendía crear mediante `MarkupBuilder`, por ejemplo `solicitudId(solicitudId)`. La coincidencia producía la  invocación errónea de un `String` como función.
 **Solución:** renombrar las variables a `vSolicitudId`, `vClienteId`, `vOrigen` y actualizar todas las referencias, conservando los nombres XML de salida.
-
 **Validación:** nueva ejecución POST con JSON `Solicitud`, HTTP `200 OK` y respuesta `SolicitudEnriquecida` que contiene `SOL-1001`, `1001`, `POSTMAN`, `Ana`, `PREMIUM`.
-
 **Alcance:** confirmado para el script y mensaje de este laboratorio; otros errores `String.call()` pueden tener causas diferentes.
-
 **Evidencia:** `docs/images/tema-08/08-2-postman-enriquecimiento-200.png`.
 
-
----
+------------------------------------------------------------------------
 
 ## KBA-LAB-008 - Errores de compatibilidad de Groovy Script v2 y procesamiento XML
 
@@ -253,7 +187,6 @@ No signature of method: java.lang.String.call() is applicable for argument types
 **Estado:** Resuelto y validado con Postman (21-10-2026).
 
 ### Contexto
-
 El iFlow recibe un JSON de solicitud por HTTPS, lo convierte a XML, conserva la solicitud original en la Exchange Property `SolicitudOriginal`, consulta los datos del cliente mediante Request Reply y construye una respuesta XML enriquecida con Groovy.
 
 ### Síntomas
@@ -363,6 +296,8 @@ La respuesta valida el recorrido funcional de la solicitud y la construcción de
 
 **Relacionado con:** KBA-LAB-007 - `java.lang.String.call()` en Groovy MarkupBuilder; Laboratorio 08.2 - Content Enricher y Request-Reply.
 
+------------------------------------------------------------------------
+
 ## KBA-LAB-009 - 502 Bad Gateway por header Content/Type mal formado
 
 ### Hallazgo - Router no compatible con Gather en el diseño probado
@@ -401,6 +336,7 @@ Hallazgo observado en el editor y runtime del tenant utilizado para el laborator
 
 Consultar `10-16-gather-router-incompatible.png`, `10-17-gather-arquitectura-corregida.png`, `10-18-gather-postman-resultado.png` y `10-19-gather-trace-consolidacion.png` en el documento del módulo 10.
 
+------------------------------------------------------------------------
 
 ## KBA-LAB-010 - 502 Bad Gateway por header Content/Type mal formado
 
@@ -1089,3 +1025,28 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 - Diagnóstico: condición Camel Simple evaluada como XPath; el diseñador también rechazó la expresión corregida inicialmente.
 - Solución: Non-XML, `${property.TotalAmount} >= '10000'`, TotalAmount extraído como java.lang.Double.
 - Alcance: 1500 omitió Logística y 15000 la activó. No se aisló el efecto de cada cambio ni se probó el límite exacto.
+
+
+## Cuota Trial de Integration Suite y segundo tenant
+
+**Estado:** Restricción comprobada.
+**Síntoma:** no existe cuota global restante para una segunda suscripción Trial.
+**Diagnóstico:** Entity Assignments muestra una unidad asignada al subaccount y cero restantes. Los entitlements de CTMS y Content Agent no aumentan esa cuota.
+**Mitigación:** conservar la suscripción existente y utilizar paquetes independientes para la simulación lógica.
+**Validación y alcance:** evidencias 23-04 a 23-08 del capítulo 23. No se probó una segunda suscripción ni un transporte entre tenants.
+
+## ID duplicado al importar un iFlow en otro paquete
+
+**Estado:** Resuelto.
+**Síntoma:** The ID LAB16-Externalized_Parameters is already in use for another artifact. Provide a different ID.
+**Diagnóstico:** el identificador original ya existe en el mismo tenant; un paquete distinto no evita la colisión.
+**Solución:** asignar Name e ID LAB23_Transport_Target durante Upload, sin editar el ZIP ni sobrescribir el original.
+**Validación y alcance:** evidencias 23-17 y 23-18. Importación individual exitosa con versión 1.0.2; no implica despliegue.
+
+## Descarga individual: parámetros y versiones
+
+**Estado:** Comportamiento comprobado dentro del alcance del laboratorio.
+**Síntoma:** los ZIP Default y Merged presentan distintos valores del endpoint; el destino solo muestra una versión.
+**Diagnóstico:** la opción de descarga determina los valores exportados; el historial del destino recién creado contiene únicamente 1.0.2.
+**Mitigación:** seleccionar conscientemente la modalidad de descarga, revisar parámetros antes de desplegar y conservar respaldos versionados para recuperación.
+**Validación y alcance:** evidencias 23-13, 23-15 y 23-18 a 23-22. No se verificó el historial completo del origen ni el valor importado de P_BODY_RESPUESTA.
