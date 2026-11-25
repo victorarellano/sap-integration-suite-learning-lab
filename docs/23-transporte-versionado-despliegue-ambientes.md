@@ -279,6 +279,308 @@ La colisión de ID se resolvió asignando un identificador independiente, sin so
 
 El endpoint y el ambiente importados requieren revisión antes del despliegue. `P_BODY_RESPUESTA` aparece en los archivos exportados, pero no se confirmó una referencia activa en el modelo importado. Esta incertidumbre no invalida la comparación de valores ni la importación realizada. No se realizó una prueba de runtime ni un transporte entre tenants en 23.2.
 
+## 23.3 - Configuración posterior al transporte
+
+**Estado:** ✅ Completado
+
+### Objetivo y conceptos
+
+Configurar el artefacto importado para representar un ambiente de destino QA, desplegarlo y comprobar su funcionamiento sin afectar al artefacto de origen.
+
+El transporte del contenido no garantiza que los parámetros importados sean apropiados para el ambiente de destino. La configuración posterior permite adaptar el comportamiento de una integración sin modificar su lógica de diseño.
+
+### Arquitectura validada
+
+```mermaid
+flowchart TD
+    A["Postman"]
+    A --> B
+    A --> C
+    subgraph Tenant["Cloud Integration - Tenant Trial"]
+        subgraph Origen["CPI Learning Lab - Origen lógico"]
+            B["LAB16-Externalized_Parameters"]
+            B --> D["PRD"]
+        end
+        subgraph Destino["CPI Learning Lab Transport - Destino lógico"]
+            C["LAB23_Transport_Target"]
+            C --> E["QA"]
+        end
+    end
+```
+
+Ambos artefactos funcionan dentro del mismo tenant, con identificadores, endpoints y configuraciones independientes. La separación representa ambientes lógicos y no un landscape físicamente distribuido.
+
+### Configuración y procedimiento
+
+#### 1. Configurar el endpoint de destino
+
+Abrir Actions → Configure del artefacto `LAB23_Transport_Target`.
+
+Asignar al parámetro `P_HTTP_ADDRESS` el valor:
+
+`/lab23/transport-target`
+
+El cambio evita interferir con los endpoints utilizados por el artefacto de origen.
+
+**Evidencia 23-23 - Configuración del endpoint de destino**
+
+![Configuración del endpoint](images/tema-23/23-23-transport-target-configure-endpoint.png)
+
+#### 2. Configurar el ambiente de destino
+
+Asignar al parámetro `P_AMBIENTE` el valor `QA`.
+
+El Content Modifier utiliza la referencia `{{P_AMBIENTE}}`, permitiendo adaptar la respuesta al ambiente sin modificar el cuerpo definido en el diseño.
+
+**Evidencia 23-24 - Configuración del ambiente QA**
+
+![Configuración del ambiente](images/tema-23/23-24-transport-target-configure-ambiente.png)
+
+#### 3. Verificar la versión del artefacto
+
+Comprobar el estado del artefacto después de guardar la configuración.
+
+**Evidencia 23-25 - Versión posterior a la configuración**
+
+![Versión posterior a Configure](images/tema-23/23-25-transport-target-version-after-configure.png)
+
+#### 4. Desplegar el artefacto
+
+Desplegar `LAB23_Transport_Target` y verificar su disponibilidad en Monitor.
+
+**Evidencia 23-26 - Artefacto de destino desplegado**
+
+![Artefacto desplegado](images/tema-23/23-26-transport-target-deployed.png)
+
+#### 5. Validar el ambiente de destino mediante Postman
+
+Ejecutar una petición GET sobre:
+
+`/http/lab23/transport-target`
+
+Comprobar HTTP 200 OK y el valor `QA` en el campo `ambiente`.
+
+**Evidencia 23-27 - Validación funcional del destino QA**
+
+![Respuesta QA](images/tema-23/23-27-postman-transport-target-qa.png)
+
+#### 6. Verificar el procesamiento del mensaje
+
+Consultar Monitor Message Processing y localizar la ejecución correspondiente a `LAB23_Transport_Target`.
+
+**Evidencia 23-28 - MPL del artefacto de destino**
+
+El mensaje presenta procesamiento exitoso, con un tiempo de ejecución de 6 ms.
+
+![MPL del destino QA](images/tema-23/23-28-mpl-transport-target-qa.png)
+
+#### 7. Validar la independencia del artefacto de origen
+
+Ejecutar una petición GET sobre el endpoint original:
+
+`/http/lab16/parameters-v2`
+
+La respuesta debe conservar el ambiente `PRD`.
+
+**Evidencia 23-29 - Validación funcional del origen PRD**
+
+La petición devuelve HTTP 200 OK, ambiente PRD y versión funcional 1.0.
+
+![Respuesta del origen PRD](images/tema-23/23-29-postman-transport-source-prd.png)
+
+### Resultado esperado y validación
+
+| Comprobación | Resultado |
+|---|---|
+| Endpoint independiente | Validado |
+| Configuración QA del destino | Validada |
+| Despliegue del destino | Correcto |
+| Respuesta HTTP del destino | 200 OK |
+| Procesamiento del mensaje | Exitoso |
+| Disponibilidad del origen | 200 OK |
+| Ambiente del origen | PRD |
+
+### Problemas encontrados y aprendizajes
+
+La configuración importada debe revisarse antes del despliegue. Los parámetros permiten adaptar una integración al ambiente de destino sin modificar su lógica.
+
+La prueba demuestra la independencia funcional de los dos artefactos dentro del mismo tenant. No demuestra aislamiento de infraestructura ni transporte entre tenants independientes.
+
+## 23.4 - Liberación y rollback
+
+**Estado:** ✅ Completado
+
+### Objetivo y conceptos
+
+Validar el ciclo de liberación de una nueva versión de un iFlow y la recuperación de una versión anterior mediante Version History, comprobando por separado el estado de diseño, la versión desplegada y el comportamiento funcional.
+
+Una reversión de diseño no equivale automáticamente a un rollback operativo. Para recuperar el comportamiento anterior es necesario comprobar qué versión permanece ejecutándose en el runtime y realizar el despliegue correspondiente.
+
+### Configuración y procedimiento
+
+#### 1. Preparar una nueva liberación
+
+Modificar el Content Modifier `CM_Respuesta_Parametros` del artefacto `LAB23_Transport_Target`.
+
+Mantener Message Body de tipo Constant y utilizar el siguiente contenido:
+
+```json
+{
+    "aplicacion": "SAP Integration Suite Learning Lab",
+    "ambiente": "{{P_AMBIENTE}}",
+    "version": "1.1",
+    "mensaje": "Nueva liberacion del artefacto transportado"
+}
+```
+
+El cambio permite identificar funcionalmente la nueva liberación, conservando la externalización del ambiente.
+
+**Evidencia 23-30 - Contenido de la nueva liberación**
+
+![Content Modifier de la nueva liberación](images/tema-23/23-30-transport-target-release-content-modifier.png)
+
+#### 2. Crear una versión numerada
+
+Guardar el cambio mediante Save as Version y registrar la versión técnica `1.0.3`.
+
+Verificar Version History.
+
+**Evidencia 23-31 - Historial de la nueva liberación**
+
+La versión 1.0.3 aparece como Active Version y la versión anterior 1.0.2 permanece disponible para recuperación.
+
+![Historial de versiones](images/tema-23/23-31-transport-target-release-version-history.png)
+
+#### 3. Desplegar la nueva versión
+
+Desplegar el artefacto y comprobar en Monitor la versión técnica 1.0.3 y la disponibilidad del endpoint.
+
+**Evidencia 23-32 - Nueva versión desplegada**
+
+El artefacto presenta despliegue exitoso y conserva el endpoint `/http/lab23/transport-target`.
+
+![Despliegue de la versión 1.0.3](images/tema-23/23-32-transport-target-release-deployed.png)
+
+#### 4. Validar funcionalmente la liberación
+
+Ejecutar la petición independiente de Postman `23.4 - Validacion nueva liberacion`.
+
+**Evidencia 23-33 - Respuesta de la nueva liberación**
+
+Se obtiene HTTP 200 OK con el siguiente contenido:
+
+```json
+{
+    "aplicacion": "SAP Integration Suite Learning Lab",
+    "ambiente": "QA",
+    "version": "1.1",
+    "mensaje": "Nueva liberacion del artefacto transportado"
+}
+```
+
+![Validación de la nueva liberación](images/tema-23/23-33-postman-transport-target-release.png)
+
+#### 5. Recuperar la versión anterior en Design
+
+Abrir Version History y ejecutar Revert sobre la versión 1.0.2.
+
+**Evidencia 23-34 - Reversión de la versión de diseño**
+
+La versión 1.0.2 aparece como Active Version. La versión 1.0.3 continúa disponible en el historial.
+
+![Reversión de diseño](images/tema-23/23-34-transport-target-version-revert.png)
+
+#### 6. Comprobar el runtime antes del rollback operativo
+
+Consultar el artefacto desplegado en Monitor, antes de realizar un nuevo despliegue.
+
+**Evidencia 23-35 - Runtime posterior a Revert**
+
+Monitor continúa mostrando la versión 1.0.3 desplegada.
+
+![Runtime antes del rollback](images/tema-23/23-35-transport-target-runtime-before-rollback.png)
+
+Esta comprobación demuestra que Revert modificó la versión activa de diseño, pero no sustituyó automáticamente la versión desplegada.
+
+```mermaid
+flowchart LR
+    subgraph Design["Design"]
+        A["1.0.3"] -->|Revert| B["1.0.2"]
+    end
+    subgraph Runtime["Runtime"]
+        C["1.0.3 desplegada"] -->|Deploy| D["1.0.2 desplegada"]
+    end
+    B -.->|Sin despliegue automático| C
+    B -->|Despliegue explícito| D
+```
+
+#### 7. Desplegar la versión recuperada
+
+Ejecutar Deploy sobre el artefacto restaurado y comprobar la versión en Monitor.
+
+**Evidencia 23-36 - Rollback desplegado**
+
+La versión técnica 1.0.2 aparece desplegada correctamente y mantiene el endpoint de destino.
+
+![Despliegue del rollback](images/tema-23/23-36-transport-target-rollback-deployed.png)
+
+#### 8. Validar funcionalmente el rollback
+
+Ejecutar la petición independiente `23.4 - Validacion rollback`.
+
+**Evidencia 23-37 - Validación funcional del rollback**
+
+Se obtiene HTTP 200 OK con la respuesta anterior:
+
+```json
+{
+    "aplicacion": "SAP Integration Suite Learning Lab",
+    "ambiente": "QA",
+    "version": "1.0",
+    "mensaje": "Respuesta inicial sin parametros externalizados"
+}
+```
+
+![Validación funcional del rollback](images/tema-23/23-37-postman-transport-target-rollback.png)
+
+El contenido funcional anterior se recupera y el ambiente QA permanece configurado.
+
+### Resultado esperado y validación
+
+| Etapa | Versión técnica | Versión funcional | Ambiente | HTTP |
+|---|---|---|---|---|
+| Inicial | 1.0.2 | 1.0 | QA | 200 OK |
+| Nueva liberación | 1.0.3 | 1.1 | QA | 200 OK |
+| Rollback | 1.0.2 | 1.0 | QA | 200 OK |
+
+### Ciclo de liberación y rollback validado
+
+```mermaid
+flowchart LR
+    A["Inicial<br/>1.0.2<br/>200 OK"]
+    B["Liberación<br/>1.0.3<br/>200 OK"]
+    C["Rollback<br/>1.0.2<br/>200 OK"]
+
+    A --> B --> C
+
+    A -.- D["Configuración externalizada conservada<br/>P_AMBIENTE = QA"]
+    B -.- D
+    C -.- D
+
+    classDef validated fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    class A,B,C validated
+```
+
+### Problemas encontrados y aprendizajes
+
+- La versión técnica del artefacto y la versión funcional incluida en el JSON son conceptos independientes.
+- Save as Version permite conservar estados de diseño recuperables.
+- Revert recupera una versión de diseño, pero no modifica automáticamente el runtime.
+- El rollback operativo requiere desplegar la versión recuperada y validar nuevamente su comportamiento.
+- En el escenario probado, el parámetro externalizado P_AMBIENTE conservó el valor QA durante la liberación y la recuperación.
+- La conservación de parámetros observada no debe generalizarse a cambios que eliminen o modifiquen sus definiciones.
+- El estado de despliegue exitoso debe complementarse con una prueba funcional del endpoint.
+
 ## Referencias
 
 - [Capítulo 16 - Externalized Parameters](16-externalized-parameters-configuración-ambiente.md).

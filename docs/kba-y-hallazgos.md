@@ -1050,3 +1050,22 @@ La recarga de la página resolvió el síntoma en esta sesión. **No se determin
 **Diagnóstico:** la opción de descarga determina los valores exportados; el historial del destino recién creado contiene únicamente 1.0.2.
 **Mitigación:** seleccionar conscientemente la modalidad de descarga, revisar parámetros antes de desplegar y conservar respaldos versionados para recuperación.
 **Validación y alcance:** evidencias 23-13, 23-15 y 23-18 a 23-22. No se verificó el historial completo del origen ni el valor importado de P_BODY_RESPUESTA.
+
+## Revert de una versión no modifica automáticamente el runtime
+
+**Estado:** Comportamiento comprobado.
+**Síntoma:** después de ejecutar Revert sobre la versión 1.0.2, Design muestra dicha versión como activa, mientras Monitor continúa mostrando la versión 1.0.3 desplegada.
+**Diagnóstico:** el historial de versiones de diseño y el estado del artefacto desplegado son independientes. Recuperar una versión anterior en Design no implica sustituir automáticamente el contenido ejecutado en runtime.
+**Procedimiento de recuperación:**
+
+1. Identificar la versión que se desea recuperar.
+2. Ejecutar Revert desde Version History.
+3. Verificar la versión activa en Design.
+4. Comprobar la versión actualmente desplegada en Monitor.
+5. Ejecutar Deploy sobre la versión recuperada.
+6. Verificar la versión desplegada y la disponibilidad del endpoint.
+7. Ejecutar una prueba funcional que confirme la recuperación del comportamiento anterior.
+
+**Validación:** LAB23_Transport_Target recuperó la versión técnica 1.0.2 y la versión funcional 1.0, con HTTP 200 OK y conservación del ambiente QA.
+**Evidencias:** 23-34 a 23-37 del capítulo 23.
+**Alcance:** recuperación de versiones de un mismo iFlow dentro del tenant Trial. No se verificó el rollback mediante Cloud Transport Management ni la conservación de parámetros ante cambios en sus definiciones.
